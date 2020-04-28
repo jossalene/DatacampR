@@ -1,0 +1,705 @@
+---
+title: "Correlation and Regression"
+author: "Hanh Nguyen"
+date: "4/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### CORRELATION AND REGRESSION ###
+
+_________________________
+Visualizing two variables
+_________________________
+. Visualizing bivariate relationships
+
+    - Both variables are numerical.
+    - One output variable as *Response Variable* - denoted as "y", aka dependent variable.
+    - One or more input variable as *Explanatory Variable* - related to the *Response Variable 
+        - denoted as "x", aka independent variable or predictor.
+        
+    - *Scatter plot* - simple two dimentional plot in which the two coordinates of each dot 
+        represent the value of one variable measured on a single observation
+          ~ Response Variable on vertical axis
+          ~ Explanatory Variable on horizontal axis
+          
+          ggplot(dataset, aes(x= Explanatory Variable, y= Response Variable)) + 
+            geom_point() + 
+            scale_x_continuous("label-of-the-horizontal-axis") + 
+            scale_y_continuous("label-of-the-vertical-axis")
+          
+          ~ Can think of boxplots as scatterplots with discretized explanatory variable, 
+          using *cut()* to chop a numeric vector into discreet chunks.
+            
+            ggplot(dataset, aes(y = Response Variable, 
+                                x = cut(Explanatory Variable, breaks = #))) +
+                                geom_point()
+                                
+                --> use # of breaks to separat the dataset into # of groups 
+                based on Explanatory Variable.
+            
+            ggplot(dataset, aes(y = Response Variable, 
+                                x = cut(Explanatory Variable, breaks = #))) +
+                                geom_boxplot()
+```{r}
+library(tidyverse)
+library(openintro)
+ncbirths
+```
+
+```{r}
+# Scatter plot of weight and weeks
+ggplot(ncbirths, aes(x = weeks, y = weight)) + 
+  geom_point() + 
+  scale_x_continuous("Length of Pregnancy (week)") +
+  scale_y_continuous("Weight of the Baby at Birth (pound)") + 
+  labs(title = "Scatter plot of Length of Pregnancy and Baby Weight at Birth")
+
+# Boxplot of weight vs. weeks in 6 intervals (ie, 5 breaks)
+ggplot(ncbirths, aes(x = cut(weeks, breaks = 5), y = weight)) +
+  geom_boxplot() + 
+  scale_x_discrete("Lenth of Pregnancy") + 
+  scale_y_continuous("Baby Weight at Birth") +
+  labs(title = "Boxplot of Length of Pregnancy and Baby Weight at Birth")
+```
+Conclusion: As the length of pregnancy increases, the baby's body weight increases. 
+
+______________________________________
+Characterizing bivariate relationships
+______________________________________
+. Underlying phenomenon based on: 
+    - Form: the overall shape made by the points.
+          ~ Ex: linear, quadratic or nonlinear.
+    - Direction: positive or negative, 
+                whether the two variables tend to move in the same or opposite direction.
+    - Strength: governed by how much scatter is present,
+                whether the points seem to be clustered to suggest a relationship. 
+    - Outliers: any point that don't fit the overall pattern, or lie far away.
+    
+```{r}
+mammals
+# Scatter plot illustrating how the brain weight of a mammal varies a function of its body weight.
+ggplot(mammals, aes(x = BodyWt, y = BrainWt)) + 
+  geom_point() +
+  scale_x_continuous("The Mammals' Body Weight (kg)") + 
+  scale_y_continuous("The Mammals' Brain Weight (kg)") +
+  labs(title = "Scatter plot of the Mammals' Brain Weight Based on Their Body Weight")
+```
+Conclusion: The mammals' brain weight increases as the body weight increases
+
+```{r}
+mlbBat10
+# Scatter plot illustrating how the slugging percentage (SLG) of a player varies as a function of his on-base percentage (OBP)
+ggplot(mlbBat10, aes(x = OBP, y = SLG)) + 
+  geom_point() + 
+  scale_y_continuous("The Player's Slugging Percentage") + 
+  scale_x_continuous("The player's On-Base Percentage") + 
+  labs(title = "Scatter plot of Slugging Percentage and On Base Percentage of the Player")
+
+```
+Conclusion: The player's slugging percentage and on base percentage has a positive relationship, although it's not very strong.
+
+```{r}
+bdims
+# Scatter plot illustrating how a person's weight varies as a function of their height, with color to separate sex using factor()
+factor_sex <- factor(bdims$sex, levels =c(0,1), labels = c("female", "male"))
+ggplot(bdims, aes(x = hgt, y = wgt)) + geom_point(aes(color = factor_sex)) + 
+  scale_x_continuous("The Respondents' Weight") + 
+  scale_y_continuous("The Respondents' Height") +
+  labs(title = "Scatter plot of Height and Weight of the Respondents")
+```
+
+
+```{r}
+smoking
+# Scatter plot illustrating how the amount that a person smokes on weekdays varies as a function of their age
+ggplot(smoking, aes(x = age, y = amtWeekdays)) + geom_point() +
+  scale_x_continuous("Age of the Person") +
+  scale_y_continuous("Number of Cigarettes Per Day on Weekdays") +
+  labs(title = "Scatter plot of Number of Cigarettes Per Day on Weekdays based on Age")
+```
+
+______________
+TRANSFORMATION
+______________
+. The relationship between two variables may not be linear. In these cases, we can sometimes see strange and even inscrutable patterns in a scatterplot of the data. Sometimes there really is no meaningful relationship between the two variables. Other times, a careful transformation of one or both of the variables can reveal a clear relationship.
+
+. ggplot2 provides several different mechanisms for viewing transformed relationships.
+  - coord_trans() : transforms the coordinates of the plot
+  - scale_x_log10() and scale_y_log10(): performs a base-10 log transformation on each axis
+```{r}
+mammals
+# Scatter plot showing how a mammal's brain weight varies as a function of its body weight, where both x and y axes are on a "log10" scale
+ggplot(mammals, aes(x = BodyWt, y = BrainWt)) + 
+  geom_point() + 
+  coord_trans(x = "log10", y = "log10") +
+  scale_x_continuous("Mammals' Body Weight") + 
+  scale_y_continuous("Mammals' Brain Weight") +
+  labs(title = "Scatter Plot of Brain Weight and Body Weight")
+#OR
+ggplot(mammals, aes(x = BodyWt, y = BrainWt)) + 
+  geom_point() + 
+  scale_x_log10("Mammals' Body Weight") +
+  scale_y_log10("Mammals' Brain Weight") +
+  labs(title = "Scatter Plot of Brain Weight and Body Weight")
+```
+
+
+________
+Outliers
+________
+. Outliers : observations that don't seem to fit with the rest of the points.
+. Alpha transparency :  making point more translucent, showing that
+                        the overplotting occurs where the darker dots are.
+. Jitter : relieves the constraint of having both coordinates be integers,
+          allowing us to see all of the data
+          
+    ggplot(dataset, aes( x= , y= )) +
+        geom_point(alpha= , position = "jitter")
+
+. Identify the outliers by filter() 
+
+```{r}
+mlbBat10
+# Filter to keep only players who had at least 200 at-bats, assigning to ab_gt_2000
+ab_gt_2000 <- mlbBat10 %>% filter(AB >= 200)
+# Scatterplot of SLG as a function of OBP
+ggplot(ab_gt_2000, aes(x = OBP, y = SLG)) + geom_point()
+# Identify the outlying player
+ab_gt_2000 %>% filter(OBP < 0.200)
+```
+
+
+___________________________________________________
+Quantifying the strength of bivariate relationships
+___________________________________________________
+. Correlation is a way to quantify the strength of that linear relationship.
+    - Correlation coefficient is a number between -1 and 1
+       -> indicates the strength of a *linear* relationship between two variables.
+        ~ Sign : direction, positive or negative
+        ~ Magnitude: strength
+            :: A correlation coefficient of close to 1 : near-perfect positive correlation.
+            :: A correlation coefficient of close to 0.5 : moderate
+            :: A correlation coefficient of close to 0 : weak
+            :: A correlation coefficient of almost equal 0 : uncorrelated
+    - Non-linear or quadratic relationship
+. Pearson product-moment correlation
+      
+      cor(x, y) : compute the Pearson product-moment correlation between variables
+                (Since this quantity is symmetric, it doesn't matter in which order
+                the variables are put)
+                -> very conservative when encountering missing data.
+      
+      use = "pairwise.complete.obs" : allow cor() to compute the correlation coefficient
+                                      for those observations where x and y are both not
+                                      missing
+
+```{r}
+ncbirths
+# Compute correlation between the birthweight of babies and the mother's age (There is no missing data in either variable)
+ncbirths %>% 
+  summarize(N = n(), r = cor(weight, mage))
+# Compute te correlation between the birthweight and the number of weeks of gestation all non-missing
+ncbirths %>%
+  summarise(N = n(), r = cor(weight, weeks, use = "pairwise.complete.obs"))
+```
+
+____________________
+The Anscombe dataset
+____________________
+. Outliers can lower or raise the correlaion although the correlation is specious
+
+```{r}
+anscombe
+nrow(anscombe)
+# Compute properties of Anscombe
+anscombe %>% 
+  group_by(set) %>%
+  summarise(
+    N = n(),
+    mean_of_x =  mean(x),
+    std_dev_of_x = sd(x),
+    mean_of_y = mean(y),
+    std_dev_of_y = sd(y),
+    correlation_between_x_and_y = cor(x, y)
+  )
+```
+
+```{r}
+mlbBat10
+#plot 1
+ggplot(mlbBat10, aes(x = OBP, y = SLG)) + geom_point()
+# Calculation the correlation between OBP and SLG for all players in the mlbBat10 dataset
+mlbBat10 %>% summarize(N = n(), cor(OBP, SLG))
+#plot 2
+mlbBat10 %>%
+  filter(AB > 200) %>%
+  ggplot(aes(x = OBP, y = SLG)) +
+  geom_point()
+# Calculate the correlations between OBP and SLG for all players in the mlbBat10 dataset with at least 200 at-bats
+mlbBat10 %>%
+  filter(AB >= 200) %>%
+  summarise(
+    N = n(), 
+    cor_between_OBP_and_SLG = cor(OBP, SLG)
+    )
+#plot 3
+ggplot(bdims, aes(x = hgt, y = wgt, color = factor(sex))) + geom_point()
+# Correlation of body dimensions between weight and height for each sex in the bdims dataset
+bdims %>% 
+  group_by(sex) %>%
+  summarise(N = n(), r = cor(hgt, wgt))
+#plot 4
+ggplot(mammals, aes(x = BodyWt, y = BrainWt)) +
+  geom_point() +
+  scale_x_log10() + 
+  scale_y_log10()
+# Calculate correlation between body weight for all species of mammals. Alongside this computation, compute the correlation between the same two quantities after taking their natural logarithms
+mammals %>% 
+  summarise(N = n(),
+            r = cor(BodyWt, BrainWt), 
+            r_log = cor(log(BodyWt), log(BrainWt)))
+```
+
+
+_____________________________
+Interpretation of Correlation
+_____________________________
+. Interpretation need to prevent causation.
+. Correlation does not imply causation.
+
+
+_____________________
+Spurious Correlations
+_____________________
+. Remarkable but nonsensical correlations are called "spurious"
+    - Ex : oil production and quality of rock music over time.
+
+```{r}
+noise
+# Create a faceted scatterplot that shows the relationship between each of the 20 sets of pairs of random variables x and y. 
+ggplot(noise, aes(x = x, y = y)) + geom_point() + facet_wrap(~z)
+#Compute correlations for each dataset
+noise_summary <- noise %>%
+  group_by(z) %>% summarise(N = n(), spurious_cor = cor(x, y))
+# Isolate sets with correlations above 0.2 in absolute strength
+noise_summary %>% filter(abs(spurious_cor) > 0.2)
+
+```
+
+______________________________
+Visualization of Linear Models
+______________________________
+. The simple linear regression model for a numeric response as a function of a numeric explanatory variable can be visualized on the corresponding scatterplot by a straight line.
+. The 'best fit' line - cuts through the data in a way that minimizes the distance between the line and the data points.
+. Linear regression is a specific example of a larger class of smooth model.
+    - geom_smooth() : draw smooth models over a scatterplot of the data
+                      -> visualizing the model in the data space
+              ~ method : specify what class of smooth models
+                      -> linear model : **method = "lm"**
+              ~ se : controls the standard error
+```{r}
+bdims
+# Scatterplot of body weight as a function of height for all individuals in the bdims dataset with as simple linear model plotted over the data
+ggplot(bdims, aes(x = hgt, y = wgt)) + geom_point() + geom_smooth(method = "lm", se = FALSE)
+```
+
+
+___________________________________________
+Uniqueness of least squares regression line
+___________________________________________
+. The least squares criterion implies that the slope of the regression line is unique.
+. add_line() = <slope coefficient>
+
+```{r}
+#Estimate optimal value of my_slope:
+add_line(my_slope = 1)
+```
+
+___________________________
+Understanding Linear Models
+___________________________
+. Linear Regression model:
+                response = intercept + (slope * explanatory) + noise
+                   Y     =  Beta0    +  Beta1 *     X        + Epsilon      
+                                                            with Epsilon ~ N(0, std)
+. Fitted Values:   Y^    =   B^0     +   B^1  *     X 
+
+. Residuals:        e    =    Y    -    Y^
+
+. Least squares:
+      - Easy deterministic, unique solution.
+      - Residuals sum to 0
+      - Xbar Ybar is guaranteed to lie on the regression line
+      - Other criteria exist
+      
+. Key concepts:
+      - Y-hat is expected value given corresponding X.
+      - Beta-hats are estimates of true, unknown betas.
+      - Residuals (e's) are estimates of true, unknown epsilons.
+      - "Error" may be misleading - better: *noise*
+
+. Fitting a linear model "by hand"
+ - First, the slope can be defined as:
+                b1        =      r(x,y)         *        s(y) / s(X)
+                               correlation            standard deviation
+
+# Print bdims_summary
+bdims_summary
+
+# Add slope and intercept
+bdims_summary %>%
+  mutate(slope = r * sd_wgt / sd_hgt, 
+         intercept = mean_wgt - slope * mean_hgt)
+         
+         
+_____________________________________
+Regression vs. regression to the mean
+_____________________________________
+. Heredity
+    - Galton's "regression to the mean"
+          ~ Extreme random observations will tend to be less extreme upon a second trial,
+            simply due to chance alone.
+          ~ "Regression to the mean" and "linear regression" are not the same thing.
+    - Thought experiment : consider the heights of the children of NBA players.
+. Regression modeling
+    - "Regression" : techniques for modeling a quantitative response.
+    - Types of regression models:
+          ~ Least squares
+          ~ Weighted
+          ~ Generalized
+          
+# Height of children vs. height of father
+ggplot(data = Galton_men, aes(x = father, y = height)) +
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_smooth(method = "lm", se = FALSE)
+
+# Height of children vs. height of mother
+ggplot(Galton_women, aes(x = mother, y =  height)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  geom_smooth(method = "lm", se = FALSE)        
+
+
+____________________________
+Interpretation of Regression
+____________________________
+. lm() : creating linear model - return a model object which contains 
+          a lot of information about regression model, including data used to fit the model,
+          the specification of the model, the fitted values and residuals, etc.
+          
+      - formula : specifies the model
+      - data    : data frame that contains the data used to fit the model
+            
+                          lm(Variable1 ~ Variable2, data = .)
+```{r}
+bdims
+mlbBat10
+mammals
+# Create a linear model for the weight of people as a function of their height
+lm(wgt ~ hgt, data = bdims)
+# create a linear model for SLG as a function of OBP
+lm(SLG ~ OBP, data = mlbBat10)
+# create a linear model for the body weight of mammals as a function of their brain weight, after taking the natural log of both variable
+lm(log(BodyWt) ~ log(BrainWt), data = mammals)
+```
+
+____________________
+Linear model project
+____________________
+
+. coef() : return the fitted coefficient as a vector
+. summary() : 
+. fitted.values() : return a vector containing the y-hat values for each data point.
+    -  In general, the length of the vector of fitted values is the same as the number 
+        of rows in the original data frame, since each observation corresponds to exactly 
+        one value of y-hat.
+    - If there were any observations with missing data, those will be automatically discarded
+      when the model is fit. --> the length of the vector of fitted values may not be a large 
+      as the number of rows in the original data frame.
+. residuals() : return the vectors of residuals
+
+. broom - package
+. augment() : recover data frame that contains the original response and explanatory 
+              variable, along with the fitted values, residuals, leverage scores, and several other pieces of information relevant to each observaton.
+```{r}
+#load broom package in tidyverse
+library(broom)
+```
+**The lm summary output**
+. "lm" object contains a host of information about the regression model that you fit. There are various ways of extracting different pieces of information
+```{r}
+bdims
+mod <- lm(wgt ~ hgt, data = bdims)
+mod
+# use coef() to display the coefficient of mod
+coef(mod)
+# use summary to display the full regression output of mod
+summary(mod)
+```
+**Fitted Values and residuals**
+. Once you hava fit a regression model, you are often interested in the fitted values and the residuals. The least squares fitting procedure guarantees that the mean of the residuals is zero(n.b., numerical instability may result in the computed values not being exactly zero). At the same time, the mean of the fitter values and residuals with the *fitted.value()* and *residuals()* function.
+```{r}
+mod <- lm(wgt ~ hgt, data = bdims)
+mod
+# Confirm that the mean of the body weights equals the mean of the fitted values of mod
+mean(bdims$wgt) == mean(fitted.values(mod))
+# Compute the mean of the residuals of mod
+mean(residuals(mod))
+```
+**Tidying your linear model**
+. As you fit a regression model, there are some quantities that can apply to the model as a whole, while others apply to each observation. If there are several of these per-observation quantities, it is sometimes convenient to attach the to the original data as new varible.
+. The *augument()* from the broom package does exactly this. It takes a model object as an argument and returns a data frame that contains the data on which the models was fit, along with several quantities specific to the regression model, including the fitted values, residuals leverage scores, and standardized residuals
+```{r}
+glimpse(bdims)
+#Load broom
+library(broom)
+# Create a new data frame called *bdims_tidy* that is the augmentation of *mod* linear model
+bdims_tidy = augment(mod)
+# Glimpse the bdims_tidy
+glimpse(bdims_tidy)
+```
+
+_______________________
+Using your linear model
+_______________________
+. Making prediction
+
+              predict(*lm object*) : returns fitted values for existing data by default
+              predict(*lm object, newdata*) : returns fitted values for any new data
+              
+. Visualize new observations
+    1. Use *augment()* to create a new dataset of predicted values
+    
+                  newdataset <- broom::augment(lm.object, newdata = new_data)
+                  
+    2. Use *geom_point()* to put thos observations on the scatterplot of the original data
+    
+                  ggplot(datset, aes(x= , y= )) + 
+                      geom_point() + geom_smooth(method = "lm") +
+                      geom_point(newdataset, aes(y= .fitted), size= , color= "..")
+  
+**Making predictions**
+  - The *fitted.values()* or the *augment()* dataframe provides us with the fitted values for the observations that were in the original data. However, once we have fit the model, we may want to compute expected values for observations that were not present in the data on which the model was fit. These types of predictions are called out-of-sample.
+  
+  
+Print ben to the console.
+# Print ben
+ben
+
+Use predict() with the newdata argument to compute the expected weight of the individual in the ben data frame.
+# Predict the weight of ben
+predict(mod, newdata = ben)
+
+
+**Adding a regressio line to a plot manually**
+. geom_smooth() : makes it easy to add a simple linear regression line to 
+                  a scatterplot of the corresponding variables.
+. geom_abline() : takes *slope* and *intercept* to add regression lines to 
+                  a scatterplot manually
+
+
+                  
+The coefs data frame contains the model estimates retrieved from coef(). Passing this to geom_abline() as the data argument will enable you to draw a straight line on your scatterplot.
+Use geom_abline() to add a line defined in the coefs data frame to a scatterplot of weight vs. height for individuals in the bdims dataset.
+
+# Add the line to the scatterplot
+ggplot(data = bdims, aes(x = hgt, y = wgt)) + 
+      geom_point() + 
+      geom_abline(data = coefs, 
+              aes(intercept = `(Intercept)`, slope = hgt),  
+              color = "dodgerblue")
+
+___________________
+Assessing Model Fit
+___________________
+. Sum of squared deviations : can be used to find  the regression line that minimizes 
+                              the sum of square residuals -> to quantify how well our
+                              modelfit the data.
+                              it can penalize large residuals disproportionately.
+
+. Sum of Squared Errors : a single number that captures how much our model missed by.
+
+. Residual Standard Error : RMSE
+
+
+RMSE
+The residual standard error reported for the regression model for poverty rate of U.S. counties in terms of high school graduation rate is 4.67. What does this mean?
+
+--> The typical difference between the observed poverty rate and the poverty rate predicted by the model is about 4.67 *percentage points*.
+
+**Standard error of residuals**
+One way to assess strength of fit is to consider how far off the model is for a typical case. That is, for some observations, the fitted value will be very close to the actual value, while for others it will not. The magnitude of a typical residual can give us a sense of generally how close our estimates are.
+
+However, recall that some of the residuals are positive, while others are negative. In fact, it is guaranteed by the least squares fitting procedure that the mean of the residuals is zero. Thus, it makes more sense to compute the square root of the mean squared residual, or root mean squared error (RMSE). R calls this quantity the residual standard error.
+
+To make this estimate unbiased, you have to divide the sum of the squared residuals by the degrees of freedom in the model. 
+You can recover the residuals from mod with *residuals()*, and the degrees of freedom with *df.residual()*.
+```{r}
+# View a summary() of mod.
+# View summary of model
+summary(mod)
+
+# Compute the mean of the residuals() and verify that it is approximately zero.
+# Compute the mean of the residuals
+mean(residuals(mod))
+
+# Use residuals() and df.residual() to compute the root mean squared error (RMSE), a.k.a. residual standard error.
+# Compute RMSE
+sqrt(sum(residuals(mod)^2) / df.residual(mod))
+
+```
+
+____________________
+Comparing model fits
+____________________
+. Null (average) model
+            Y-hat = Y-bar
+            
+.Assessing simple linear model fit
+    - Recall that the coefficient of determination (R2), can be computed as
+                R2 = 1−SSE/SST
+                   = 1−Var(e)/Var(y)
+            where e is the vector of residuals and y is the response variable. 
+
+    - This gives us the interpretation of R2 as the percentage of the variability 
+      in the response that is explained by the model, since the residuals are the 
+      part of that variability that remains unexplained by the model.
+
+```{r}
+# View model summary
+summary(mod)
+
+# Compute R-squared
+bdims_tidy %>%
+  summarize(var_y = var(wgt), var_e = var(.resid)) %>%
+  mutate(R_squared = 1 - var_e / var_y)
+```
+
+--> This means that 51.4% of the variability in weight is explained by height.
+
+**Interpretation of R^2**
+The R2 reported for the regression model for poverty rate of U.S. counties in terms of high school graduation rate is 0.464.
+
+lm(formula = poverty ~ hs_grad, data = countyComplete) %>%
+              summary()
+              
+How should this result be interpreted?
+---> This means that 46.4% of the variability in poverty rate among U.S. counties can be explained by high school graduation rate.
+
+
+**Linear vs. average**
+The R2 gives us a numerical measurement of the strength of fit relative to a null model based on the average of the response variable:
+                                          y^null=y¯
+This model has an R2 of zero because SSE=SST. That is, since the fitted values (y^null) are all equal to the average (y¯), the residual for each observation is the distance between that observation and the mean of the response. Since we can always fit the null model, it serves as a baseline against which all other models will be compared.
+
+In the graphic, we visualize the residuals for the null model (mod_null at left) vs. the simple linear regression model (mod_hgt at right) with height as a single explanatory variable. Try to convince yourself that, if you squared the lengths of the grey arrows on the left and summed them up, you would get a larger value than if you performed the same operation on the grey arrows on the right.
+
+It may be useful to preview these augment()-ed data frames with glimpse():
+
+glimpse(mod_null)
+glimpse(mod_hgt)
+
+
+Compute the sum of the squared residuals (SSE) for the null model mod_null.
+# Compute SSE for null model
+mod_null %>%
+  summarize(SSE = sum(.resid^2))
+  
+Compute the sum of the squared residuals (SSE) for the regression model mod_hgt.
+# Compute SSE for regression model
+mod_hgt %>%
+  summarize(SSE = sum(.resid^2))
+
+______________
+Unusual Points
+______________
+. Leverage is the distance between the value of the explanatory variable and mean of the explanatory variable
+    --> This means that points that are close to the horizontal center of the scatter plot have low leverage, while points that are far awau from horizontal center of the scatterplot have high leverage
+
+. The lerage scores can be retrived using the augment function and then examining the hat variable
+        lm.object %>%
+          augment() %>% 
+          arrange(desc(.hat))
+
+. Obseverations of high leverage, by virtue of their extreme values of the explanatory variable, may or may not have a considerable effect on the slope of the regression line.
+
+. An observation that does have a considerable effect on the slope of the regression line is called influential
+
+**Leverage**
+The leverage of an observation in a regression model is defined entirely in terms of the distance of that observation from the mean of the explanatory variable. That is, observations close to the mean of the explanatory variable have low leverage, while observations far from the mean of the explanatory variable have high leverage. Points of high leverage may or may not be influential.
+
+The augment() function from the broom package will add the leverage scores (.hat) to a model data frame.
+
+
+```{r}
+#Use augment() to list the top 6 observations by their leverage scores, in descending order.
+# Rank points of high leverage
+mod %>%
+  augment() %>%
+  arrange(desc(.hat)) %>%
+  head()
+```
+**Influence**
+As noted previously, observations of high leverage may or may not be influential. The influence of an observation depends not only on its leverage, but also on the magnitude of its residual. Recall that while leverage only takes into account the explanatory variable (x), the residual depends on the response variable (y) and the fitted value (y^).
+
+Influential points are likely to have high leverage and deviate from the general relationship between the two variables. We measure influence using Cook's distance, which incorporates both the leverage and residual of each observation.
+
+```{r}
+# Use augment() to list the top 6 observations by their Cook's distance (.cooksd), in descending order.
+mod %>%
+  augment() %>%
+  arrange(desc(.cooksd)) %>%
+  head()
+```
+
+_____________________
+Dealing with Outliers
+_____________________
+.Removing outliers that don't fit
+    - What is the justification?
+    - How does the scope of interference change?
+
+**Removing outliers**
+Observations can be outliers for a number of different reasons. Statisticians must always be careful—and more importantly, transparent—when dealing with outliers. Sometimes, a better model fit can be achieved by simply removing outliers and re-fitting the model. However, one must have strong justification for doing this. A desire to have a higher R2 is not a good enough reason!
+
+In the mlbBat10 data, the outlier with an OBP of 0.550 is Bobby Scales, an infielder who had four hits in 13 at-bats for the Chicago Cubs. Scales also walked seven times, resulting in his unusually high OBP. The justification for removing Scales here is weak. While his performance was unusual, there is nothing to suggest that it is not a valid data point, nor is there a good reason to think that somehow we will learn more about Major League Baseball players by excluding him.
+
+Nevertheless, we can demonstrate how removing him will affect our model.
+
+```{r}
+mlbBat10
+#Use filter() to create a subset of mlbBat10 called nontrivial_players consisting of only those players with at least 10 at-bats and OBP of below 0.500.
+# Create nontrivial_players
+nontrivial_players <- mlbBat10 %>% filter(AB >= 10, OBP < 0.500)
+nontrivial_players
+#Fit the linear model for SLG as a function of OBP for the nontrivial_players. Save the result as mod_cleaner.
+# Fit model to new data
+mod_cleaner <- lm(formula = SLG ~ OBP, data = nontrivial_players)
+mod_cleaner
+#View the summary() of the new model and compare the slope and R2 to those of mod, the original model fit to the data on all players.
+# View model summary
+summary(mod_cleaner)
+#Visualize the new model with ggplot() and the appropriate geom_*() functions.
+ggplot(data = nontrivial_players, aes(x = OBP, y = SLG)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+**High leverage points**
+Not all points of high leverage are influential. While the high leverage observation corresponding to Bobby Scales in the previous exercise is influential, the three observations for players with OBP and SLG values of 0 are not influential.
+
+This is because they happen to lie right near the regression anyway. Thus, while their extremely low OBP gives them the power to exert influence over the slope of the regression line, their low SLG prevents them from using it
+```{r}
+# Rank high leverage points
+#The linear model, mod, is available in your workspace. Use a combination of augment(), arrange() with two arguments, and head() to find the top 6 observations with the highest leverage but the lowest Cook's distance
+mod %>%
+  augment() %>%
+  arrange(desc(.hat)) %>%
+  head()
+
+```
+
