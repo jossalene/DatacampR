@@ -9,22 +9,110 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+- Machine learning utilizes computers to turn data into insight and action.
+- This course focuses on training a machine to learn from prior examples
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+- *Classification*: the task of learning a concept which is a set of categories.
+    ex: classification tasks for driverless cars: when a vehicle's camera observes an object (a stop sign),
+                                                    it must classify object before it can react.
 
-```{r cars}
-summary(cars)
+
+<u><h3>Classification with Nearest Neighbors</h3></u>
+
+
+- A nearest neighbor classifiers take advantage of the fact that signs that look alike should be similar to, 
+  or 'nearby' other signs of the same type.
+- A nearest neighbor learner decide whether two signs are similar by *measuring the distance btween them in feature space*
+    ex: color of each sign
+- k-Nearest Neighbors (kNN) - an algorithm uses the principle of nearest neighbor to classify unlabeled examples.
+- By default, in R, *knn()* searches a dataset for the historic observation most similar to the newly-observed one.
+
+***
+library(class)
+pred <- knn(training_data, testing_data, training_labels)
+***
+
+**Practice**
+
+After several trips with a human behind the wheel, it is time for the self-driving car to attempt the test course alone.
+As it begins to drive away, its camera captures the following image:
+
+![knn_stop_99](http://s3.amazonaws.com/assets.datacamp.com/production/course_2906/datasets/knn_stop_99.gif)
+
+Can you apply a kNN classifier to help the car recognize this sign?
+
+```{r}
+# load packages: library(class) and library(tidyverse)
+# load dataset:
+signs <- read.csv("https://assets.datacamp.com/production/repositories/718/datasets/c274ea22cc3d7e12d7bb9fdc9c2bdabe9ab025f4/knn_traffic_signs.csv")
+signs <- signs[, !names(signs) %in% c('id', 'sample')]
+signs
+# dataframe
+next_sign = signs[nrow(signs), -1] 
+next_sign
+# Create a vector of sign labels to use with kNN by extracting the column *sign_type* from *signs*.
+sign_types <- signs$sign_type
+sign_types
+# Classify the next sign observed
+knn(signs[-1], next_sign, cl=sign_types)
 ```
 
-## Including Plots
+To better understand how the knn() function was able to classify the stop sign, it 
+may help to examine the training dataset it used.
+Each previous observed street sign was divided into a 4x4 grid, and the red, green, and blue level for each of the 16 center pixels is recorded as illustrated here.
 
-You can also embed plots, for example:
+![knn_sign_data](http://s3.amazonaws.com/assets.datacamp.com/production/course_2906/datasets/knn_sign_data.png)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+The result is a dataset that records the sign_type as well as 16x3=48 colors properties of each sign
+
+```{r}
+signs <- read.csv("https://assets.datacamp.com/production/repositories/718/datasets/c274ea22cc3d7e12d7bb9fdc9c2bdabe9ab025f4/knn_traffic_signs.csv")
+signs <- signs[, !names(signs) %in% c('id', 'sample')]
+signs
+#Examine the structure of the signs dataset
+str(signs)
+# Count the number of signs of each type
+table(signs$sign_type)
+# Check r10's average red level by sign type
+aggregate(r10 ~ sign_type, data = signs, mean)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Now that the autonomous vehicle has successfully stopped on its own, your team 
+feels confident allowing the car to continue the test course.
+The test course includes 59 additional road signs divided into three types:
+
+![knn_stop_28](http://s3.amazonaws.com/assets.datacamp.com/production/course_2906/datasets/knn_stop_28.gif)
+
+![knn_speed_55](http://s3.amazonaws.com/assets.datacamp.com/production/course_2906/datasets/knn_speed_55.gif)
+
+![knn_peds_47](http://s3.amazonaws.com/assets.datacamp.com/production/course_2906/datasets/knn_peds_47.gif)
+
+At the conclusion of the trial, you are asked to measure the car's overall performance 
+at recognizeing these signs.
+
+The class package and the dataset *signs* are already loaded in your workspace. So is the dataframe *test_signs*, which holds a set of observations you'll test your model on.
+- Classify the test_signs data using knn().
+    . Set train equal to the observations in signs without labels.
+    . Use test_signs for the test argument, again without labels.
+    . For the cl argument, use the vector of labels provided for you.
+- Use table() to explore the classifier's performance at identifying the three 
+  sign types (the confusion matrix).
+    . Create the vector signs_actual by extracting the labels from test_signs.
+    . Pass the vector of predictions and the vector of actual signs to table() 
+      to cross tabulate them.
+- Compute the overall accuracy of the kNN learner using the mean() function.
+
+```{r}
+# Use kNN to identify the test road signs
+sign_types <- signs$sign_type
+signs_pred <- knn(train = signs[-1], test = test_signs[-1], cl = sign_types)
+
+# Create a confusion matrix of the predicted versus actual values
+signs_actual <- test_signs$sign_type
+table(signs_pred, signs_actual)
+
+# Compute the accuracy
+mean(signs_pred == signs_actual)
+```
+
