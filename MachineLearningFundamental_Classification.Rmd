@@ -17,10 +17,14 @@ knitr::opts_chunk$set(echo = TRUE)
     ex: classification tasks for driverless cars: when a vehicle's camera observes an object (a stop sign),
                                                     it must classify object before it can react.
 
+
+***
+### PART 1: KNN ###
+***
+
 ___________________________________________
 ***Classification with Nearest Neighbors***
 ___________________________________________
-
 
 - A nearest neighbor classifiers take advantage of the fact that signs that look alike should be similar to, 
   or 'nearby' other signs of the same type.
@@ -237,3 +241,254 @@ ________________________________
     summary(signs$r1)
 ```
 
+
+
+----------------------------------------------------------------------------------------------------------
+
+***
+### PART 2: NAIVE BAYES ###
+***
+
+
+______________________________
+Understanding Bayesian methods
+______________________________
+. Thomas Bayes - promoted rules for estimating probabilities in light of historic data
+. Bayesian methods - a branch of statistics
+          ex: some smartphones and apps predict the user's destination to offer routes and traffic estimates
+              without the user even asking --> Phone keeps record of the user's past location as the data to
+              forecast the user's most probable future location.
+          ex2: phone records number of times at different location: home(10), restaurant(3), work(23), store(4)
+              Estimating probability
+                  The probability of A is denoted as P(A)
+                  P(work) = 23/40 = 57.5%
+                  P(store) = 4/40 = 10.0%
+              Joint probability and independent events
+                  The joint probability of events A and B is denoted P(A and B)
+                  One event does not influence the probability of another -> independent events
+                      -> One event is independent of another if knowing one doesn't give you 
+                        information about how likely the other is -> Knowing the outcome of one event 
+                        does not help predict the other
+                  P(work and evening) = 1%
+                  P(work and afternoon) = 20%
+              Conditional probability and dependent events
+                  When one event is predictive of another -> dependent events
+                  Conditional probability expresses how one event depends on another
+                  Conditional probability of events A and B is denoted as P(A | B)
+                  P(A|B) = P(A and B) / P(B)
+                  P(work|evening) = 1/25 = 4%
+                  P(work|afternoon) = 20/25 = 80%
+. 'Naive Bayes' -  applies Bayesian methods to estimate the conditional probability of an outcome.
+
+      # building a Naive Bayes model
+      library(naivebayes)
+      m <- naive_bayes(location ~ time_of_day, data = location_history)
+
+**Practice**
+. The where9am data frame contains 91 days (thirteen weeks) worth of data in which Brett recorded his location
+  at 9am each day as well as whether the daytype was a weekend or weekday.
+
+. Using the conditional probability formula below, you can compute the probability that Brett is working in 
+  the office, given that it is a weekday.
+  
+                          P(A|B) = P(A and B) / P(B)
+                          
+      - Find P(office) using nrow() and subset() to count rows in the dataset and save the result as p_A.
+      - Find P(weekday), using nrow() and subset() again, and save the result as p_B.
+      - Use nrow() and subset() a final time to find P(office and weekday). Save the result as p_AB.
+      - Compute P(office | weekday) and save the result as p_A_given_B.
+      - Print the value of p_A_given_B.
+
+```{r}
+location <- read.csv("https://assets.datacamp.com/production/repositories/718/datasets/571628c39048df59c40c9dcfba146a2cf7a4a0e3/locations.csv")
+location
+am9 <- location[location$hour == 9,]
+am9
+where9am <- am9[, names(am9) %in% c("daytype", "location")]
+# Compute P(A) 
+p_A <- nrow(subset(where9am, location == "office")) / nrow(where9am)
+p_A
+# Compute P(B)
+p_B <- nrow(subset(where9am, daytype == "weekday")) / nrow(where9am)
+p_B
+# Compute the observed P(A and B)
+p_AB <- nrow(subset(where9am, location == "office" & daytype == "weekday")) / nrow(where9am)
+p_AB 
+# Compute P(A | B) and print its value
+p_A_given_B <- p_AB/p_B
+p_A_given_B
+```
+*A simple Naive Bayes location model*
+. The previous exercises showed that the probability that Brett is at work or at home at 9am is highly 
+  dependent on whether it is the weekend or a weekday.
+
+. To see this finding in action, use the where9am data frame to build a Naive Bayes model on the same data.
+
+. You can then use this model to predict the future: 
+        where does the model think that Brett will be at 9am on Thursday and at 9am on Saturday?
+
+. The dataframe where9am is available in your workspace. This dataset contains information about Brett's
+  location at 9am on different days.
+    - Load the naivebayes package.
+    - Use naive_bayes() with a formula like y ~ x to build a model of location as a function of daytype.
+    - Forecast the Thursday 9am location using predict() with the thursday9am object as the newdata argument.
+    - Do the same for predicting the saturday9am location.
+```{r}
+#install.package(naivebayes)
+#library(naivebayes)
+##thursday9amdf <- am9[am9$weekday == "thursday",]
+##thursday9amdf
+##thursday9am <- data.frame(daytype = thursday9amdf[,names(thursday9amdf) %in% c("daytype")][1])
+##thursday9am
+thursday9am <- data.frame(daytype = "weekday")  
+thursday9am$daytype <- factor(thursday9am$daytype, labels= c(1, 2), levels = c("weekday", "weekend"))
+## create a new dataframe: data.frame(x= c(1,2,3), y=(1,2,3)) or data.frame(x= c(1:3), y= c(1:3))
+# Build the location prediction model
+locmodel <- naive_bayes(location ~ daytype, data = where9am)
+
+# Predict Thursday's 9am location
+predict(locmodel, thursday9am)
+
+# Predict Saturdays's 9am location
+saturday9am <- data.frame(daytype = "weekend")
+saturday9am$daytype <- factor(saturday9am$daytype, labels = c(1, 2), levels = c("weekday", "weekend"))
+predict(locmodel, saturday9am)
+```
+
+*Examining "raw" probabilities*
+. The naivebayes package offers several ways to peek inside a Naive Bayes model.
+
+. Typing the name of the model object provides the a priori (overall) and conditional probabilities of 
+  each of the model's predictors. If one were so inclined, you might use these for calculating posterior
+  (predicted) probabilities by hand.
+
+. Alternatively, R will compute the posterior probabilities for you if the type = "prob" parameter is
+  supplied to the predict() function.
+
+. Using these methods, examine how the model's predicted 9am location probability varies from day-to-day.
+. The model locmodel that you fit in the previous exercise is in your workspace.
+      - Print the locmodel object to the console to view the computed a priori and conditional
+        probabilities.
+      - Use the predict() function similarly to the previous exercise, but with type = "prob" to see 
+        the predicted probabilities for Thursday at 9am.
+      - Compare these to the predicted probabilities for Saturday at 9am.
+```{r}
+# The 'naivebayes' package is loaded into the workspace
+# and the Naive Bayes 'locmodel' has been built
+
+# Examine the location prediction model
+locmodel <- naive_bayes(location ~ daytype, data = where9am)
+
+# Obtain the predicted probabilities for Thursday at 9am
+thursday9am <- data.frame(daytype = "weekday")  
+thursday9am$daytype <- factor(thursday9am$daytype, labels= c(1, 2), levels = c("weekday", "weekend"))
+predict(locmodel, thursday9am)
+
+# Obtain the predicted probabilities for Saturday at 9am
+saturday9am <- data.frame(daytype = "weekend")
+saturday9am$daytype <- factor(saturday9am$daytype, labels = c(1, 2), levels = c("weekday", "weekend"))
+predict(locmodel, saturday9am)
+```
+
+_______________________________
+***Understand NB's 'naivety'***
+_______________________________
+. With a single predictor, conditional probability is based on the overlap between the two events.
+. When adding more events, there're more overlaping between events and can be confusing.
+--> Naive Bayes algorithm uses a shortcut to approximate the conditional probability we hope to compute.
+    It assummes that the events are independent, thus, the joint probability can be computed by 
+    multiplying the individual probabilities.
+. The problem of the method is that if there is a zero in the multiplification chain, the result will be
+  zero. To solve this problem, adding a small number in each individual multiplifications to eliminate the power (The Laplace correction).
+
+**Practice**
+
+. A more sophisticated location model .
+- The locations dataset records Brett's location every hour for 13 weeks. Each hour, the tracking
+  information includes the daytype (weekend or weekday) as well as the hourtype (morning, afternoon,
+  evening, or night).
+
+- Using this data, build a more sophisticated model to see how Brett's predicted location not only varies 
+  by the day of week but also by the time of day. The dataset locations is already loaded in your workspace.
+
+- You can specify additional independent variablloes in your formula using the + sign (e.g. y ~ x + b).
+
+    ~ Use the R formula interface to build a model where location depends on both daytype and hourtype. 
+    ~ Recall that the function naive_bayes() takes 2 arguments: formula and data.
+    ~ Predict Brett's location on a weekday afternoon using the dataframe weekday_afternoon and the
+      predict() function.
+    ~ Do the same for a weekday_evening.
+
+```{r}
+# The 'naivebayes' package is loaded into the workspace already
+
+# Build a NB model of location
+locations <- location[,names(location) %in% c("id","daytype","hourtype","location")]
+locations
+locmodel <- naive_bayes(location ~ daytype + hourtype, data = locations)
+
+# Predict Brett's location on a weekday afternoon
+weekday_afternoon <- locations[13,]
+predict(locmodel, weekday_afternoon)
+
+# Predict Brett's location on a weekday evening
+weekday_evening <- locations[19,]
+predict(locmodel, weekday_evening)
+```
+. Preparing for unforeseen circumstances .
+    - While Brett was tracking his location over 13 weeks, he never went into the office during the weekend.
+    - Consequently, the joint probability of P(office and weekend) = 0.
+
+    - Explore how this impacts the predicted probability that Brett may go to work on the weekend in the
+      future. Additionally, you can see how using the Laplace correction will allow a small chance for 
+      these types of unforeseen circumstances.
+
+    - The model locmodel is already in your workspace, along with the dataframe weekend_afternoon.
+    
+        ~ Use the locmodel to output predicted probabilities for a weekend afternoon by using the predict()
+          function. Remember to set the type argument.
+        ~ Create a new naive Bayes model with the Laplace smoothing parameter set to 1. You can do this by
+          setting the laplace argument in your call to naive_bayes(). Save this as locmodel2.
+        ~ See how the new predicted probabilities compare by using the predict() function on your new model.
+
+```{r}
+# The 'naivebayes' package is loaded into the workspace already
+# The Naive Bayes location model (locmodel) has already been built
+
+# Observe the predicted probabilities for a weekend afternoon
+weekend_afternoon <- locations[85,]
+predict(locmodel, weekday_afternoon, type = "prob")
+
+# Build a new model using the Laplace correction
+locmodel2 <- naive_bayes(location ~ daytype + hourtype, data = locations, laplace = 1)
+
+# Observe the new predicted probabilities for a weekend afternoon
+predict(locmodel2, weekend_afternoon, type = "prob")
+
+```
+
+____________________________________________
+***Applying Naive Bayes to other problems***
+____________________________________________
+. Naive Bayes makes predictions by computing conditional probabilities of events and outcomes.
+. Predictors used in Naive Bayes typically comprises a set of categories.
+. Numeric properties are difficult for Naive
+
+. Binning - a simple method for creating categories from numeric data.
+          - divide a range of numbers into a series of sets called "bins"
+              ex1: divide a numbers into bins based on percentiles by creating a category for 
+                    the bottom 25%, the next 25%, and so on
+              ex2: group ranges of values into meaningful bins
+                    (time -> afternoon - evening)
+                    (temperature -> cold - warm - hot)
+. Bag-of-words - common process to prepare text data for Naive Bayes
+               - adding structure to text data
+               - creates an event for each word that appears in a particular collection of text documents.
+               - estimates the probability of the outcome given the evidence provided by the words in the
+                  text.
+
+--------------------------------------------------------------------------------------------------
+
+***
+### PART 3: LOGISTIC REGRESSION ###
+***
