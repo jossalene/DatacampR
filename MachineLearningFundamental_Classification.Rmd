@@ -492,3 +492,756 @@ ____________________________________________
 ***
 ### PART 3: LOGISTIC REGRESSION ###
 ***
+
+_______________________________________________
+***Making binary predictions with regression***
+_______________________________________________
+
+- Regression analysis - a branch of statistics interested in modeling numeric relationships within data.
+- Regression methods are perhaps the single most common form of machine learning.
+- In its most basic form, regression involves predicting an outcome y using one or more predictors, labeled as x variables.
+- Regression for binary y outcome (something that can take only '1' or '0' values, ex 'donate' or 'not donate'), the points fall in two falt rows rather than spread along the diagonal. A straight line can still be applied but doesn't seem to fit very well. Additional, for some values of x, the model will predict values less than 0 or greater than 1. --> Not ideal 
+        --> Use curve line --> *Logistic regression* 
+
+- A type of S-shaped curve called a logistic function has the property that for any input value of x, the output is always between 0 and 1 just like a probability. The greater this probability, the more likely the outcome likely the outcome is to be the one labeled '1'.
+- In R, logistic regression uses the *glm()*
+
+    . R formula interface:
+                m <- glm(y ~ x1 + x2 + x3, data=my_dataset, family="binomial")
+                          ~ family="binomial" -> logistic regression
+    
+    . Predicted probability:
+                prob <- predict(m, test_dataset, type="response")
+                          ~ type="response" -> predict function produces the predicted probabilities
+    
+    . Prediction:
+                pred <- ifelse(prob <condition > < = >, 1, 0)
+                          -> predict '1' if the predicted probability is in the condition, and '0' otherwise.
+                          ~ Sometimes may need to set the threshold condition higher or lower to make
+                            the model more or less aggressive.
+                            
+
+ **Practice**          
+ 
+Building simple logistic regression models
+
+The donors dataset contains 93,462 examples of people mailed in a fundraising solicitation for paralyzed military veterans. The donated column is 1 if the person made a donation in response to the mailing and 0 otherwise. This binary outcome will be the dependent variable for the logistic regression model.
+
+The remaining columns are features of the prospective donors that may influence their donation behavior. These are the model's independent variables.
+
+When building a regression model, it is often helpful to form a hypothesis about which independent variables will be predictive of the dependent variable. The bad_address column, which is set to 1 for an invalid mailing address and 0 otherwise, seems like it might reduce the chances of a donation. Similarly, one might suspect that religious interest (interest_religion) and interest in veterans affairs (interest_veterans) would be associated with greater charitable giving.
+
+      - Examine donors using the str() function.
+      - Count the number of occurrences of each level of the donated variable using the table() function.
+      - Fit a logistic regression model using the formula interface and the three independent variables
+        described above.
+          . Call glm() with the formula as its first argument and the dataframe as the data argument.
+          . Save the result as donation_model.
+      - Summarize the model object with summary().
+
+```{r}
+donors <- read.csv("https://assets.datacamp.com/production/repositories/718/datasets/9055dac929e4515286728a2a5dae9f25f0e4eff6/donors.csv")
+
+# Examine the dataset to identify potential independent variables
+str(donors)
+
+# Explore the dependent variable
+table(donors$donated)
+
+
+# Build the donation model
+donation_model <- glm(donated ~ bad_address + interest_religion + interest_veterans, 
+                      data = donors, family = "binomial")
+
+# Summarize the model results
+summary(donation_model)
+```
+                            
+Making a binary prediction
+
+In the previous exercise, you used the glm() function to build a logistic regression model of donor behavior. As with many of R's machine learning methods, you can apply the predict() function to the model object to forecast future behavior. By default, predict() outputs predictions in terms of log odds unless type = "response" is specified. This converts the log odds to probabilities.
+
+Because a logistic regression model estimates the probability of the outcome, it is up to you to determine the threshold at which the probability implies action. One must balance the extremes of being too cautious versus being too aggressive. For example, if you were to solicit only the people with a 99% or greater donation probability, you may miss out on many people with lower estimated probabilities that still choose to donate. This balance is particularly important to consider for severely imbalanced outcomes, such as in this dataset where donations are relatively rare.                            
+                            
+      - Use the predict() function to estimate each person's donation probability. Use the type argument to
+        get probabilities. Assign the predictions to a new column called donation_prob.
+      - Find the actual probability that an average person would donate by passing the mean() function 
+        the appropriate column of the donors dataframe.
+      - Use ifelse() to predict a donation if their predicted donation probability is greater than average.
+        Assign the predictions to a new column called donation_pred.
+      - Use the mean() function to calculate the model's accuracy.      
+      
+```{r}
+# Estimate the donation probability
+donors$donation_prob <- predict(donation_model, type = "response")
+
+# Find the donation probability of the average prospect
+mean(donors$donated)
+
+# Predict a donation if probability of donation is greater than average
+donors$donation_pred <- ifelse(donors$donation_prob > 0.0504, 1, 0)
+
+# Calculate the model's accuracy
+mean(donors$donated == donors$donation_pred)
+```
+                            
+
+_________________________________
+***Model performance tradeoffs***
+_________________________________
+
+- When one outcome is very rare, predicting the opposite can result in a very high accuracy.
+
+- ROC curve - a visualization that provides a way to better understande a model's ability to distinguish between positive and negative predictions the outcome of interest versus all others.
+- The ROC curve depicts the relationship between the percentage of positive examples as it relates to the percentage of the other outcomes.
+    . The diagnogal line is the baseline performance for a very poor model.
+    . The further another curve is away from this, the better it is performing.
+    . A model that is very close to the diagonal line is not performing very well at all.
+
+AUC - Area Under the Curve - measures the area under the ROC curves.
+    . The baseline model that is no better than random chance has an AUC of 0.5, because it divides the 1-by-1
+      unit square perfectly in half.
+    . A perfect model has an AUC of 1 with a curve all the way in the upper left of the square.
+    . Most real-world results are somewhere in between.
+    . The closer the AUC is to 1, the better.
+    . Curves of varying shapes can have the same AUC value
+          -> look not only at the AUC but also how the shape of each vurves indicates how a model is 
+              performing across the range of predictions.
+
+ROC curves are an important tool for comparing models and selecting the best model. When used with as single
+model, it can help to visualize the tradeoff between true positives and false positives for the outcome
+of interest.
+
+**Practice**
+
+Calculating ROC Curves and AUC
+The previous exercises have demonstrated that accuracy is a very misleading measure of model performance on imbalanced datasets. Graphing the model's performance better illustrates the tradeoff between a model that is overly agressive and one that is overly passive.
+
+In this exercise you will create a ROC curve and compute the area under the curve (AUC) to evaluate the logistic regression model of donations you built earlier.
+
+    . Load the pROC package.
+    . Create a ROC curve with roc() and the columns of actual and predicted donations. 
+      Store the result as ROC.
+    . Use plot() to draw the ROC object. Specify col = "blue" to color the curve blue.
+    . Compute the area under the curve with auc()
+                            
+```{r}
+# Load the pROC package
+library(pROC)
+
+# Create a ROC curve
+ROC <- roc(donors$donated, donors$donation_prob)
+
+# Plot the ROC curve
+plot(ROC, col = "blue")
+
+# Calculate the area under the curve (AUC)
+auc(ROC)
+```
+                           
+
+_____________________________________________________
+***Dummy variables, missing data, and interactions***
+_____________________________________________________
+
+. All of the predictors used in a regression analysis must be numeric.
+. Missing data also poses a problem, as the empty value cannot be used to make predictions.
+
+. Dummy coding - creates a set of binary (1-0) variables that represent each category except one that 
+  serves as the reference group.
+. Dummy coding is the most common method for handling categorical data for logistic regression.
+. The glm function will automatically dummy code any factor type variables used in the model.
+      - Apply factor()
+              factor(data$column, levels = c(0, 1, 2), labels = c("Male", "Female"m "Other"))
+. By default, the regression model will exclude any observation with missing values on its predictors.
+
+. Imputation - fills/imputes the missing value with a guess about what the value may be.
+. Mean imputation - imputes the avergae
+
+. An interaction effect considers the fact that two predictors, when combined, may have a different impact
+  on an outcome than the sum of their separate individual impacts. Their combination may strengthen, weaken, or completely eliminate the impact of the individual predictors.
+  
+
+**Practice**
+
+Coding categorical features
+Sometimes a dataset contains numeric values that represent a categorical feature.
+
+In the donors dataset, wealth_rating uses numbers to indicate the donor's wealth level:
+
+0 = Unknown
+1 = Low
+2 = Medium
+3 = High
+
+    - Create a factor wealth_levels from the numeric wealth_rating with labels as shown above by passing 
+      the factor() function the column you want to convert, the individual levels, and the labels.
+    - Use relevel() to change the reference category to Medium. The first argument should be your new 
+      factor column.
+    - Build a logistic regression model using the column wealth_levels to predict donated and display 
+      the result with summary().
+
+```{r}
+# Convert the wealth rating to a factor
+donors$wealth_levels <- factor(donors$wealth_rating, levels = c(0, 1, 2, 3), labels = c("Unknown", "Low", "Medium", "High"))
+donors$wealth_levels
+
+# Use relevel() to change reference category
+donors$wealth_levels <- relevel(donors$wealth_levels, ref = "Medium")
+donors$wealth_levels
+
+# See how our factor coding impacts the model
+summary(glm(donated ~ wealth_levels, data = donors, family = "binomial"))
+```
+
+
+Handling missing data
+Some of the prospective donors have missing age data. Unfortunately, R will exclude any cases with NA values when building a regression model.
+
+One workaround is to replace, or impute, the missing values with an estimated value. After doing so, you may also create a missing data indicator to model the possibility that cases with missing data are different in some way from those without.
+
+The dataframe donors is loaded in your workspace.
+
+    - Use summary() on donors$age to find the average age of prospects with non-missing data.
+    - Use ifelse() and the test is.na(donors$age) to impute the average (rounded to 2 decimal places) 
+      for cases with missing age. Be sure to also ignore NAs.
+    - Create a binary dummy variable named missing_age indicating the presence of missing data using 
+      another ifelse() call and the same test.
+
+```{r}
+# Find the average age among non-missing values
+summary(donors$age)
+
+# Impute missing age values with the mean age
+donors$imputed_age <- ifelse(is.na(donors$age), round(mean(donors$age, na.rm = TRUE), 2), donors$age)
+
+# Create missing value indicator for age
+donors$missing_age <- ifelse(is.na(donors$age), 1, 0)
+```
+
+Building a more sophisticated model
+One of the best predictors of future giving is a history of recent, frequent, and large gifts. In marketing terms, this is known as R/F/M:
+
+Recency
+Frequency
+Money
+Donors that haven't given both recently and frequently may be especially likely to give again; in other words, the combined impact of recency and frequency may be greater than the sum of the separate effects.
+
+Because these predictors together have a greater impact on the dependent variable, their joint effect must be modeled as an interaction. The donors dataset has been loaded for you.
+
+    - Create a logistic regression model of donated as a function of money plus the interaction of recency 
+      and frequency. Use * to add the interaction term.
+    - Examine the model's summary() to confirm the interaction effect was added.
+    - Save the model's predicted probabilities as rfm_prob. Use the predict() function, and remember 
+      to set the type argument.
+    - Plot a ROC curve by using the function roc(). Remember, this function takes the column of outcomes 
+      and the vector of predictions.
+    - Compute the AUC for the new model with the function auc() and compare performance to the simpler model.
+
+```{r}
+# Build a recency, frequency, and money (RFM) model
+rfm_model <- glm(donated ~ recency * frequency + money, data = donors, family = "binomial")
+
+# Summarize the RFM model to see how the parameters were coded
+summary(rfm_model)
+
+# Compute predicted probabilities for the RFM model
+rfm_prob <- predict(rfm_model, data = donors, type = "response")
+
+# Plot the ROC curve for the new model
+library(pROC)
+ROC <- roc(donors$donated, rfm_prob)
+plot(ROC, col = "red")
+auc(ROC)
+
+```
+
+
+
+_________________________________
+***Automatic feature selection***
+_________________________________
+
+- Regression asks the human to specify the model's predictors ahead of time.
+- Automatic feature selection can be used to allow the model to be built in the absence of theory or even
+  common sense.
+
+- Stepwise regression involves building a regression model step by step, evaluating each predictor to see 
+  which ones add value to the final model -> showing that the model may over or understate the importance of
+  some of the predictors.
+    . Backward deletions - a procedure that begins with a model containing all of the predictors, then, 
+        check to see what happens when each one of the predictors is removed from the model. If a removing 
+        a predictor does not substantially impact the model's ability to predict the outcome, then it can 
+        be safely deleted. At each step, the predictor that impacts the model the least is removed -- assuming,
+        of course, it has minimal impact. This continues step-by-step until only important predictors remain.
+    . Forward selection - a procedure that begins with a model containing no predictors, it examines each
+        potential predictor to see which one, if any, offers the greatest improvement to the model's predictive
+        power. Predictors are added step-by-step until no new predictors add substantial value to the model.
+  --> It is possible that the two procedures could come to completely different conclusions about the most
+      important predictors
+  --> Neither of them is guaranteed to find the best possible model.
+  --> Stepwise model violates some of the priciples that allow a regression model to explain data & predict.
+         --> should be considered as one tool for exploring protential models in the absence of another
+              good starting point.
+        
+**Practice**
+
+Building a stepwise regression model
+In the absence of subject-matter expertise, stepwise regression can assist with the search for the most important predictors of the outcome of interest.
+
+In this exercise, you will use a forward stepwise approach to add predictors to the model one-by-one until no additional benefit is seen. The donors dataset has been loaded for you.
+
+    - Use the R formula interface with glm() to specify the base model with no predictors. 
+      Set the explanatory variable equal to 1.
+    - Use the R formula interface again with glm() to specify the model with all predictors.
+    - Apply step() to these models to perform forward stepwise regression. Set the first argument to 
+      null_model and set direction = "forward". This might take a while (up to 10 or 15 seconds) as 
+      your computer has to fit quite a few different models to perform stepwise selection.
+    - Create a vector of predicted probabilities using the predict() function.
+    - Plot the ROC curve with roc() and plot() and compute the AUC of the stepwise model with auc()
+        
+```{r}
+# Specify a null model with no predictors
+# no prediction -> donated ~ 1
+null_model <- glm(donated ~ 1, data = donors, family = "binomial")
+
+# Specify the full model using all of the potential predictors
+# predict the response with all variables in the dataframe except the response: donated ~ .
+full_model <- glm(donated ~ ., data = donors, family = "binomial")
+
+# Use a forward stepwise algorithm to build a parsimonious model
+step_model <- step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
+
+# Estimate the stepwise donation probability
+step_prob <- predict(step_model, type = "response")
+
+# Plot the ROC of the stepwise model
+library(pROC)
+ROC <- roc(donors$donated, step_prob)
+plot(ROC, col = "red")
+auc(ROC)       
+```
+
+_________________________________
+***Making decisions with trees***
+_________________________________
+
+- A difficult or complex decision can be made simpler by breaking down into a series of smaller decisions.
+- Classification trees (aka,  decision trees) - used to find a set of if/else conditions that are helpful for
+  taking action.
+  
+- Growing the decision tree uses a process called *divide-and-conquer* because it attempts to divide the dataset into partitions with similar values for the outcome of interest.
+
+- Rpart -  package that can be used to build classification trees in R - for recursive partitioning, 
+                                                                         a synonym for divide-and-conquer.
+          
+          # building a simple rpart classification tree
+              library(rpart)
+              m <- rpart(outcome ~ predictor1 + predictor2 + predictor3, data= , method="class")
+                      . method="class" -> tells rpart to buil a classification tree.
+          
+          # making prediction from an rpart tree
+              p <- predict(m, test_data, type="data")
+
+**Practice**
+
+Building a simple decision tree
+The loans dataset contains 11,312 randomly-selected people who applied for and later received loans from Lending Club, a US-based peer-to-peer lending company.
+
+You will use a decision tree to try to learn patterns in the outcome of these loans (either repaid or default) based on the requested loan amount and credit score at the time of application.
+
+Then, see how the tree's predictions differ for an applicant with good credit versus one with bad credit.
+
+The dataset loans is already in your workspace.
+
+    - Load the rpart package.
+    - Fit a decision tree model with the function rpart().
+          . Supply the R formula that specifies outcome as a function of loan_amount and credit_score as the 
+            first argument.
+          . Leave the control argument alone for now. (You'll learn more about that later!)
+    - Use predict() with the resulting loan model to predict the outcome for the good_credit applicant. 
+      Use the type argument to predict the "class" of the outcome.
+    - Do the same for the bad_credit applicant.
+
+```{r}
+loans$outcome <- ifelse(loans$default == 0, "repaid", "default")
+loans$outcome <- factor(loans$outcome)
+str(loans)
+```
+
+```{r}
+loans <- loans[, -c(1:3)]
+str(loans)
+```
+
+```{r}
+nrow(loans[loans$outcome == "repaid",])/nrow(loans)
+length(loans)
+```
+
+```{r}
+loans
+```
+
+    
+```{r}
+#loans <- read.csv("https://assets.datacamp.com/production/repositories/718/datasets/7805fceacfb205470c0e8800d4ffc37c6944b30c/loans.csv")
+
+# Load the rpart package
+# library(rpart)
+# library(tidyverse)
+# library("dplyr")
+
+good_credit <- loans %>% filter(credit_score == "AVERAGE" | credit_score == "HIGH")
+bad_credit <- loans %>% filter(credit_score == "LOW")
+
+# Build a lending model predicting loan outcome versus loan amount and credit score
+loan_model <- rpart(outcome ~ loan_amount + credit_score, data = loans, method = "class", control = rpart.control(cp = 0))
+
+# Make a prediction for someone with good credit
+predict(loan_model, good_credit, type = "class")
+
+# Make a prediction for someone with bad credit
+predict(loan_model, bad_credit, type = "class")
+
+```
+
+  
+  Visualizing classification trees
+Due to government rules to prevent illegal discrimination, lenders are required to explain why a loan application was rejected.
+
+The structure of classification trees can be depicted visually, which helps to understand how the tree makes its decisions. The model loan_model that you fit in the last exercise is in your workspace.
+  
+    - Type loan_model to see a text representation of the classification tree.
+    - Load the rpart.plot package.
+    - Apply the rpart.plot() function to the loan model to visualize the tree.
+    - See how changing other plotting parameters impacts the visualization by running the supplied command.
+
+
+  
+```{r}
+# Examine the loan_model object
+loan_model
+
+# Load the rpart.plot package
+library(rpart.plot)
+
+# Plot the loan_model with default settings
+rpart.plot(loan_model)
+
+# Plot the loan_model with customized settings
+rpart.plot(loan_model, type = 3, box.palette = c("red", "green"), fallen.leaves = TRUE)
+```
+  
+_________________________________________
+***Growing larger classification trees***
+_________________________________________
+
+- Classification trees use divide-and-conquer to identify splits that create the most "pure", or homogeneous,
+  partitions. 
+      . For each of the predictors, the algorithm attemps a split on the feature values and then calculates 
+        the purity of the result partitions.
+      . The split that produces the purest partitions will be used first. It then continues to 
+        divide-and-conquer further.
+- As the tree continues to grow, it creates smaller and more homogeneous partitions.
+- The tree doesn't use a diagonal line because a diagonal line requires the tree to consider two features at
+  once, which is not possible in the divide-and-conquer process.
+- Instead, a decision tree always creates *axis-parallel splits* - which can be overly complex when
+                                                                  modeling certian pattern in the data.
+- Decision trees have the tendency to become very complex very quickly. When a tree has grown overly large 
+  and overly complex, it may experience the problem of overfitting -> tends to model the noise instead.
+- Classification trees have this tendency to overfit the dataset it is trained on.
+
+- When a machine learning model has been over-fitted to its training dataset, it's important to
+  not over-estimate how well the model will perform in the future.
+  
+- A simple method for constructing test sets involves holding out a small random portion of the full dataset.
+  This is a fair estimate of the tree's future performance on unseen data. If the tree performs more poorly 
+  on the evaluation set than the training set, it suggests the model may have been over-fitted.
+
+
+**Practice**
+
+Creating random test datasets
+Before building a more sophisticated lending model, it is important to hold out a portion of the loan data to simulate how well it will predict the outcomes of future loan applicants.
+
+As depicted in the following image, you can use 75% of the observations for training and 25% for testing the model.
+
+
+
+The sample() function can be used to generate a random sample of rows to include in the training set. Simply supply it the total number of observations and the number needed for training.
+
+Use the resulting vector of row IDs to subset the loans into training and testing datasets. The dataset loans is loaded in your workspace.
+
+    - Apply the nrow() function to determine how many observations are in the loans dataset, 
+      and the number needed for a 75% sample.
+    - Use the sample() function to create an integer vector of row IDs for the 75% sample. 
+      The first argument of sample() should be the number of rows in the data set, and the second is 
+      the number of rows you need in your training set.
+    - Subset the loans data using the row IDs to create the training dataset. Save this as loans_train.
+    - Subset loans again, but this time select all the rows that are not in sample_rows. 
+      Save this as loans_test
+
+```{r}
+# Determine the number of rows for training
+nrow(loans) * 0.75
+
+# Create a random sample of row IDs
+sample_rows <- sample(nrow(loans), nrow(loans) * 0.75)
+sample_rows
+
+# Create the training dataset
+loans_train <- loans[sample_rows, ]
+loans_train
+
+# Create the test dataset
+loans_test <- loans[-sample_rows, ]
+loans_test
+```
+
+Building and evaluating a larger tree
+Previously, you created a simple decision tree that used the applicant's credit score and requested loan amount to predict the loan outcome.
+
+Lending Club has additional information about the applicants, such as home ownership status, length of employment, loan purpose, and past bankruptcies, that may be useful for making more accurate predictions.
+
+Using all of the available applicant data, build a more sophisticated lending model using the random training dataset created previously. Then, use this model to make predictions on the testing dataset to estimate the performance of the model on future loan applications.
+
+The rpart package is loaded into the workspace and the loans_train and loans_test datasets have been created.
+  
+    - Use rpart() to build a loan model using the training dataset and all of the available predictors. 
+      Again, leave the control argument alone.
+    - Applying the predict() function to the testing dataset, create a vector of predicted outcomes. 
+      Don't forget the type argument. 
+    - Create a table() to compare the predicted values to the actual outcome values.
+    - Compute the accuracy of the predictions using the mean() function.
+        
+```{r}
+# Grow a tree using all of the available applicant data
+loan_model <- rpart(outcome ~ ., data = loans_train, method = "class", control = rpart.control(cp = 0))
+
+# Make predictions on the test dataset
+loans_test$pred <- predict(loan_model, loans_test, type = "class")
+
+# Examine the confusion matrix
+table(loans_test$pred, loans_test$outcome)
+
+# Compute the accuracy on the test dataset
+mean(loans_test$pred == loans_test$outcome)
+```
+        
+_____________________________________
+***Tending to classification trees***
+_____________________________________
+
+- Decision trees have a tendency to grow overly large and complex very quickly.
+- Pruning strategies - help ensure the trees are just right not too large and not too small.
+
+
+- Pre-pruning - method of preventing a tree from becoming too large involves stopping the growing
+                process early.
+              -  stops divide-and-conquer once the tree reaches a predefined size.
+              - However, a tree stopped too early may fail to discover subtle or important patterns it might
+                have discovered later
+- Post-pruning - a method of growing a very large tree but then prune it back to reduce the size.
+               - nodes and branches with only a minor impact on the tree's overall accuracy are removed 
+                 after the fact.
+               - As the tree becomes increasingly complex, the model makes fewer errors.
+               - However, though the performance improves a lot at first, it then improves only
+                 slightly for the later increases in complexity -> provides insights into the optimal point
+                                                                   at which to prune the tree
+                                                                -> simply look for the point at which the 
+                                                                   curve flattens.
+               - The horizontal dotted line identifies the point at which the error rate becomes statistically
+                 similar to the most complex model.
+                          . The tree should be pruned at the complexity level that results in a 
+                            classification error rate just under this line.
+                      
+                      
+                      # pre-pruning with rpart
+                        
+                        library(rpart)
+                        prune_control <- rpart.control(maxdepth=30, minsplit=20)
+                     
+                        m <- rpart(response ~ predictor1 + predictor2, 
+                                    data= , 
+                                    method="class", 
+                                    control=prune_control)
+                 
+                       # post-pruning with rpart
+                       
+                        m <- rpart(response ~ predictor1 + predictor2,
+                                   data= ,
+                                   method="class")
+                                   
+                        plotcp(m)
+                        
+                        m_pruned <- prune(m, cp = 0.20)
+                              
+                              - cp = cut point
+
+**Practice**
+
+Preventing overgrown trees
+The tree grown on the full set of applicant data grew to be extremely large and extremely complex, with hundreds of splits and leaf nodes containing only a handful of applicants. This tree would be almost impossible for a loan officer to interpret.
+
+Using the pre-pruning methods for early stopping, you can prevent a tree from growing too large and complex. See how the rpart control options for maximum tree depth and minimum split count impact the resulting tree.
+
+rpart is loaded.
+
+1.
+    -  Use rpart() to build a loan model using the training dataset and all of the available predictors.
+    - Set the model controls using rpart.control() with parameters cp set to 0 and maxdepth set to 6.
+    - See how the test set accuracy of the simpler model compares to the original accuracy of 58.3%.
+    - First create a vector of predictions using the predict() function.
+    - Compare the predictions to the actual outcomes and use mean() to calculate the accuracy.
+2.
+    - In the model controls, remove maxdepth and add a minimum split parameter, minsplit, set to 500.
+    
+          # Swap maxdepth for a minimum split of 500 
+              loan_model <- rpart(outcome ~ ., 
+                                  data = loans_train, 
+                                  method = "class", 
+                                  control = rpart.control(cp = 0, maxdepth = 6))
+
+          # Run this. How does the accuracy change?
+              loans_test$pred <- predict(loan_model, loans_test, type = "class")
+              mean(loans_test$pred == loans_test$outcome)
+    
+```{r}
+#1.
+
+# Grow a tree with maxdepth of 6
+loan_model <- rpart(outcome ~ ., data = loans_train, method = "class", control = rpart.control(cp = 0, maxdepth = 6))
+
+# Make a class prediction on the test set
+loans_test$pred <- predict(loan_model, loans_test, type = "class")
+
+# Compute the accuracy of the simpler tree
+mean(loans_test$pred == loans_test$outcome)
+
+#2.
+
+# original  
+loan_model <- rpart(outcome ~ ., data = loans_train, method = "class", control = rpart.control(cp = 0, minsplit = 500))
+loan_model
+
+loans_test$pred <- predict(loan_model, loans_test, type = "class")
+mean(loans_test$pred == loans_test$outcome)
+
+# Swap maxdepth for a minimum split of 500 
+loan_model <- rpart(outcome ~ ., data = loans_train, method = "class", control = rpart.control(cp = 0, minsplit = 500))
+loan_model
+
+# Run this. How does the accuracy change?
+loans_test$pred <- predict(loan_model, loans_test, type = "class")
+mean(loans_test$pred == loans_test$outcome)
+
+```
+
+Creating a nicely pruned tree
+Stopping a tree from growing all the way can lead it to ignore some aspects of the data or miss important trends it may have discovered later.
+
+By using post-pruning, you can intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
+
+In this exercise, you will have the opportunity to construct a visualization of the tree's performance versus complexity, and use this information to prune the tree to an appropriate level.
+
+The rpart package is loaded into the workspace, along with loans_test and loans_train.
+
+    - Use all of the applicant variables and no pre-pruning to create an overly complex tree. 
+      Make sure to set cp = 0 in rpart.control() to prevent pre-pruning.
+    - Create a complexity plot by using plotcp() on the model.
+    - Based on the complexity plot, prune the tree to a complexity of 0.0014 using the prune() function 
+      with the tree and the complexity parameter.
+    - Compare the accuracy of the pruned tree to the original accuracy of 58.3%. 
+      To calculate the accuracy use the predict() and mean() functions.
+
+```{r}
+# Grow an overly complex tree
+loan_model <- rpart(outcome ~ ., data = loans_train, method = "class", control = rpart.control(cp = 0))
+
+# Examine the complexity plot
+plotcp(loan_model)
+
+# Prune the tree
+loan_model_pruned <- prune(loan_model, cp = 0.0014)
+
+# Compute the accuracy of the pruned tree
+loans_test$pred <- predict(loan_model_pruned, loans_test, type = "class")
+mean(loans_test$pred == loans_test$outcome)
+
+```
+
+
+______________________________________
+***Seeing the forest from the trees***
+______________________________________
+
+- A number of classification trees can be combined into a collection known as a decision tree forest.
+- Growing diverse trees requires the growing conditions to be varied from tree to tree.
+      -> This is done by allocating each tree a random subset of data; one may receive a vastly different
+          training set than another.
+          
+Random forests - an algorithm in which both the features and the examples may differ from tree to tree.
+               - applies ensemble methods - based on the principle that weaker learners become stronger with
+                                            teamwork.
+               - each tree is asked to make a prediction, and the group's overall prediction is determined
+                 by a majority vote. Though each tree may reflect only a narrow portion of the data, the
+                 overall consensus is strengthen by these diverse perspectives.
+                 
+                 
+                 # building a simple random forest
+                 
+                  library(randomForest)
+                  m <- randomForest(response ~ predictor1 + predictor2,
+                                    data = ,
+                                    ntree= 500           # number of trees in the forest
+                                    mtry =  sqrt(p))     # number of predictors (p) per tree
+
+                  # making predictions from a random forest
+                  
+                  p <- predict(m, test_data)
+
+
+**Practice**
+
+Building a random forest model
+In spite of the fact that a forest can contain hundreds of trees, growing a decision tree forest is perhaps even easier than creating a single highly-tuned tree.
+
+Using the randomForest package, build a random forest and see how it compares to the single trees you built previously.
+
+Keep in mind that due to the random nature of the forest, the results may vary slightly each time you create the forest
+
+    - Load the randomForest package.
+    - Build a random forest model using all of the loan application variables. 
+      The randomForest function also uses the formula interface.
+    - Compute the accuracy of the random forest model to compare to 
+      the original tree's accuracy of 58.3% using predict() and mean().
+
+```{r}
+#install.packages("randomForest")
+#library(randomForest)
+
+# Build a random forest model
+loan_model <- randomForest(outcome ~ ., data = loans_train)
+
+# Compute the accuracy of the random forest
+loans_test$pred <- predict(loan_model, loans_test)
+mean(loans_test$pred == loans_test$outcome)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
