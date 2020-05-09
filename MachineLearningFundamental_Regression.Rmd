@@ -555,3 +555,1050 @@ ___________________________________
 ### PART 2: TRAINING AND EVALUATING REGRESSION MODELS ##
 ***
 
+____________________________________
+***Evaluating a model graphically***
+____________________________________
+
+- Plotting ground truth vs. prediction
+    . Predictions: x- axis
+    . Outcomes: y-axis
+    . A well fitting model
+        ~ x = y (diagonal) line runs through center of points
+        ~ "line of perfect prediction"
+    . A poorly fitting model
+        ~ Points are all on one side of x =  y (diagonal) line
+        ~ Systematic errors - errors that are correlated with the actual outcome
+      --> This can indicate that you don't have yet all the important variables in your model.
+      --> Or you need an algorithm that can find more complex relationships in the data
+      
+- The Residual plot - plots the residuals - the difference between outcome and predictions -
+                      against the predictions.
+    . A well fitting model:
+        ~ Residual: actual outcome prediction
+        ~ Good fit: no systematic errors.
+                    --> the errors will be evenly distributed between positive and negative,
+                          and have about the same magnitude above and below.
+    . A poorly fitting model
+        ~ Systematic errors
+            --> there will be clusters of all positive or all negative residuals
+
+- The Gain Curve plot is useful when sorting the instances is more important than 
+                        predicting the exact outcome value.
+          - useful for models that predict probability
+          - measures how well model sorts the outcome
+- The Wizard curve - the curve a perfect model would trace out.
+- Reading the Gain Curve - based on how much the model curve and the wizard curve line up 
+                            almost perfectly.
+
+              
+              library("WVPlots")
+              GainCurvePlot(dataframe,"prediction" , "outcome-columns" , "title")
+
+**Practices**
+
+Graphically evaluate the unemployment model
+In this exercise you will graphically evaluate the unemployment model, unemployment_model, that you fit to the unemployment data in the previous chapter. Recall that the model predicts female_unemployment from male_unemployment.
+
+You will plot the model's predictions against the actual female_unemployment; recall the command is of the form
+
+ggplot(dframe, aes(x = pred, y = outcome)) + 
+       geom_point() +  
+       geom_abline()
+Then you will calculate the residuals:
+
+residuals <- actual outcome - predicted outcome
+and plot predictions against residuals. The residual graph will take a slightly different form: you compare the residuals to the horizontal line x=0 (using geom_hline()) rather than to the line x=y. The command will be provided.
+
+The data frame unemployment and model unemployment_model are available in the workspace.
+
+      - predict() to get the model predictions and add them to unemployment 
+          as the column predictions.
+      - Plot predictions (on the x-axis) versus actual female unemployment rates. 
+          Are the predictions near the x=y line
+          
+--------------------------------------------------------
+
+> unemployment
+   male_unemployment female_unemployment predictions
+1                2.9                 4.0    3.448245
+2                6.7                 7.4    6.087456
+3                4.9                 5.0    4.837304
+4                7.9                 7.2    6.920891
+5                9.8                 7.9    8.240497
+6                6.9                 6.1    6.226362
+7                6.1                 6.0    5.670739
+8                6.2                 5.8    5.740192
+9                6.0                 5.2    5.601286
+10               5.1                 4.2    4.976210
+11               4.7                 4.0    4.698398
+12               4.4                 4.4    4.490039
+13               5.8                 5.2    5.462380
+
+> summary(unemployment)
+ male_unemployment female_unemployment  predictions   
+ Min.   :2.900     Min.   :4.000       Min.   :3.448  
+ 1st Qu.:4.900     1st Qu.:4.400       1st Qu.:4.837  
+ Median :6.000     Median :5.200       Median :5.601  
+ Mean   :5.954     Mean   :5.569       Mean   :5.569  
+ 3rd Qu.:6.700     3rd Qu.:6.100       3rd Qu.:6.087  
+ Max.   :9.800     Max.   :7.900       Max.   :8.240
+ 
+ > summary(unemployment_model)
+Call:
+lm(formula = fmla, data = unemployment)
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.77621 -0.34050 -0.09004  0.27911  1.31254 
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        1.43411    0.60340   2.377   0.0367 *  
+male_unemployment  0.69453    0.09767   7.111 1.97e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Residual standard error: 0.5803 on 11 degrees of freedom
+Multiple R-squared:  0.8213,	Adjusted R-squared:  0.8051 
+F-statistic: 50.56 on 1 and 11 DF,  p-value: 1.966e-05
+
+# Make predictions from the model
+unemployment$predictions <- predict(unemployment_model, unemployment)
+> unemployment$predictions
+ [1] 3.448245 6.087456 4.837304 6.920891 8.240497 6.226362 5.670739 5.740192
+ [9] 5.601286 4.976210 4.698398 4.490039 5.462380
+
+# Fill in the blanks to plot predictions (on x-axis) versus the female_unemployment rates
+ggplot(unemployment, aes(x = predictions, y = female_unemployment)) + 
+  geom_point() + 
+  geom_abline()
+
+-------------------------------------------------------------
+
+    - Calculate the residuals between the predictions and actual unemployment rates. 
+        Add these residuals to unemployment as the column residuals.
+    - Fill in the blanks to plot predictions (on the x-axis) versus residuals (on the y-axis).
+        This gives you a different view of the model's predictions as compared to ground truth.
+
+---------------------------------------------------------------
+
+# From previous step
+unemployment$predictions <- predict(unemployment_model)
+
+# Calculate residuals
+unemployment$residuals <- unemployment$female_unemployment - unemployment$predictions
+> unemployment$residuals
+ [1]  0.55175451  1.31254386  0.16269612  0.27910835 -0.34049690 -0.12636236
+ [7]  0.32926122  0.05980856 -0.40128612 -0.77620978 -0.69839784 -0.09003919
+[13] -0.26238041
+
+# Fill in the blanks to plot predictions (on x-axis) versus the residuals
+ggplot(unemployment, aes(x = predictions, y = residuals)) + 
+  geom_pointrange(aes(ymin = 0, ymax = residuals)) + 
+  geom_hline(yintercept = 0, linetype = 3) + 
+  ggtitle("residuals vs. linear model prediction")
+
+---------------------------------------------------------------
+
+The gain curve to evaluate the unemployment model
+In the previous exercise you made predictions about female_unemployment and visualized the predictions and the residuals. Now, you will also plot the gain curve of the unemployment_model's predictions against actual female_unemployment using the WVPlots::GainCurvePlot() function.
+
+For situations where order is more important than exact values, the gain curve helps you check if the model's predictions sort in the same order as the true outcome.
+
+Calls to the function GainCurvePlot() look like:
+
+GainCurvePlot(frame, xvar, truthvar, title)
+where
+
+frame is a data frame
+xvar and truthvar are strings naming the prediction and actual outcome columns of frame
+title is the title of the plot
+When the predictions sort in exactly the same order, the relative Gini coefficient is 1. When the model sorts poorly, the relative Gini coefficient is close to zero, or even negative.
+
+    - The data frame unemployment and the model unemployment_model are in the workspace.
+        . Load the package WVPlots using library().
+        . Plot the gain curve. Give the plot the title "Unemployment model". 
+            Do the model's predictions sort correctly?
+
+--------------------------------------------------------------------
+> unemployment
+   male_unemployment female_unemployment predictions   residuals
+1                2.9                 4.0    3.448245 -0.55175451
+2                6.7                 7.4    6.087456 -1.31254386
+3                4.9                 5.0    4.837304 -0.16269612
+4                7.9                 7.2    6.920891 -0.27910835
+5                9.8                 7.9    8.240497  0.34049690
+6                6.9                 6.1    6.226362  0.12636236
+7                6.1                 6.0    5.670739 -0.32926122
+8                6.2                 5.8    5.740192 -0.05980856
+9                6.0                 5.2    5.601286  0.40128612
+10               5.1                 4.2    4.976210  0.77620978
+11               4.7                 4.0    4.698398  0.69839784
+12               4.4                 4.4    4.490039  0.09003919
+13               5.8                 5.2    5.462380  0.26238041
+
+> summary(unemployment)
+ male_unemployment female_unemployment  predictions      residuals       
+ Min.   :2.900     Min.   :4.000       Min.   :3.448   Min.   :-1.31254  
+ 1st Qu.:4.900     1st Qu.:4.400       1st Qu.:4.837   1st Qu.:-0.27911  
+ Median :6.000     Median :5.200       Median :5.601   Median : 0.09004  
+ Mean   :5.954     Mean   :5.569       Mean   :5.569   Mean   : 0.00000  
+ 3rd Qu.:6.700     3rd Qu.:6.100       3rd Qu.:6.087   3rd Qu.: 0.34050  
+ Max.   :9.800     Max.   :7.900       Max.   :8.240   Max.   : 0.77621
+
+> unemployment_model
+Call:
+lm(formula = fmla, data = unemployment)
+Coefficients:
+      (Intercept)  male_unemployment  
+           1.4341             0.6945
+
+> summary(unemployment_model)
+Call:
+lm(formula = fmla, data = unemployment)
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.77621 -0.34050 -0.09004  0.27911  1.31254 
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        1.43411    0.60340   2.377   0.0367 *  
+male_unemployment  0.69453    0.09767   7.111 1.97e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Residual standard error: 0.5803 on 11 degrees of freedom
+Multiple R-squared:  0.8213,	Adjusted R-squared:  0.8051 
+F-statistic: 50.56 on 1 and 11 DF,  p-value: 1.966e-05
+
+# Plot the Gain Curve
+GainCurvePlot(unemployment, "predictions", "female_unemployment", "Unemployment model")
+
+------------------------------------------------------------
+
+____________________________________
+***Root Mean Squared Error (RMSE)***
+____________________________________
+
+- Root Mean Squared Error (RMSE) - a key metric for evaluating the prediction performance of 
+                                    a regression model.
+                                 - the "typical" prediction error of the model on that data
+                   RMSE = square-root(mean((pred - y)square))
+        . RMSE is defined as the square root of the mean squared error of the mode; on a data
+        . pred - y = the error, or residuals vector
+        . mean((pred y)square) = mean value of ((pred - y)square)
+
+- RMSE of model
+                  
+                  # calculating error
+                  err <- dataframe$prediction - dataframe$actual
+                  
+                  # square the error vector
+                  err2 <- err^2
+                  
+                  # take the mean, and sqrt it
+                  (rmse <- sqrt(mean(err2))
+                  
+                  # the standard deviation of the outcome
+                  (sdtemp <- sd(dataframe$actual))
+    
+    - Evaluate the RMSE by comparing it to the standard deviation outcome.
+        . RMSE < standard deviation: model tends to estimate interest variable better than
+                                      simply taking the average
+
+
+**Practices**
+
+Calculate RMSE
+In this exercise you will calculate the RMSE of your unemployment model. In the previous coding exercises, you added two columns to the unemployment dataset:
+
+the model's predictions (predictions column)
+the residuals between the predictions and the outcome (residuals column)
+You can calculate the RMSE from a vector of residuals, res, as:
+
+RMSE=square-root(mean((res)square))
+You want RMSE to be small. How small is "small"? One heuristic is to compare the RMSE to the standard deviation of the outcome. With a good model, the RMSE should be smaller.
+
+The data frame unemployment is in your workspace.
+
+    - Review the unemployment data from the previous exercise.
+    - For convenience, assign the residuals column from unemployment to the variable res.
+    - Calculate RMSE: square res, take its mean, and then square root it. 
+        Assign this to the variable rmse and print it.
+      . Tip: you can do this in one step by wrapping the assignment 
+            in parentheses: (rmse <- ___)
+    - Calculate the standard deviation of female_unemployment and assign it to the variable
+        sd_unemployment. Print it. How does the rmse of the model compare to the 
+        standard deviation of the data?
+
+-------------------------------------------------
+
+> unemployment
+   male_unemployment female_unemployment predictions   residuals
+1                2.9                 4.0    3.448245 -0.55175451
+2                6.7                 7.4    6.087456 -1.31254386
+3                4.9                 5.0    4.837304 -0.16269612
+4                7.9                 7.2    6.920891 -0.27910835
+5                9.8                 7.9    8.240497  0.34049690
+6                6.9                 6.1    6.226362  0.12636236
+7                6.1                 6.0    5.670739 -0.32926122
+8                6.2                 5.8    5.740192 -0.05980856
+9                6.0                 5.2    5.601286  0.40128612
+10               5.1                 4.2    4.976210  0.77620978
+11               4.7                 4.0    4.698398  0.69839784
+12               4.4                 4.4    4.490039  0.09003919
+13               5.8                 5.2    5.462380  0.26238041
+
+> summary(unemployment)
+ male_unemployment female_unemployment  predictions      residuals       
+ Min.   :2.900     Min.   :4.000       Min.   :3.448   Min.   :-1.31254  
+ 1st Qu.:4.900     1st Qu.:4.400       1st Qu.:4.837   1st Qu.:-0.27911  
+ Median :6.000     Median :5.200       Median :5.601   Median : 0.09004  
+ Mean   :5.954     Mean   :5.569       Mean   :5.569   Mean   : 0.00000  
+ 3rd Qu.:6.700     3rd Qu.:6.100       3rd Qu.:6.087   3rd Qu.: 0.34050  
+ Max.   :9.800     Max.   :7.900       Max.   :8.240   Max.   : 0.77621
+ 
+> # For convenience put the residuals in the variable res
+> res <- unemployment$residuals
+> 
+> # Calculate RMSE, assign it to the variable rmse and print it
+> (rmse <- sqrt(mean(res^2)))
+[1] 0.5337612
+> 
+> # Calculate the standard deviation of female_unemployment and print it
+> (sd_unemployment <- sd(unemployment$female_unemployment))
+[1] 1.314271
+
+-------------------------------------------------------
+
+_____________________
+***R-Squared (R^2)***
+_____________________
+
+- R-Squared - another key metric for evaluating regression models
+            - a measure of how well a model fits the data
+            - a value between 0 and 1
+                  . near 1: model fits well
+                  . near 0: no better than guessing the average value
+            - is the variance explained by the model
+            - is defined as 1 minus the ratio of the residual sum of squares 
+                to the total sum of squares
+                
+                (R^2) = 1 - (RSS/SStotal)
+                  . RSS = sum((y-prediction)square)
+                        -> Residual sum of squares (variance from model)
+                  . SStotal = sum((y - (mean y))square)
+                        -> Total sum of sqaures (variance of data)
+                  
+                  . If the RSS < SStotal -> R-Square is large -> the model fits data well.
+                  
+- Calculate R-Squared
+              
+              # calculate error between prediction and actual
+              err <- dataframe$prediction - dataframe$actual
+              
+              # square it and take the sum
+              rss <- sum(err^2)
+              
+              . actual: column of actual
+              . prediction : column of prediction
+              
+              # take the difference of prices from the mean price
+              toterr <- dataframe$actual - mean(dataframe$actual)
+              
+              # square it and take the sum
+              sstot <- sum(toterr^2)
+              
+              # calculate r-squared
+              r_squared <- 1 - (rss/sstottal)
+
+- Reading R-Squared from lm() model
+              # from summary(model)
+              
+              # from summary(model)$r.squared
+              
+              # from glance(model)$r.squared
+
+- Correlation and R-squared
+              
+               rho <- cor(dataframe$prediction, dataframe$actual)
+               
+               rho^2
+               
+               p = cor(prediction, actual)
+               p^2 = R^2
+               
+      -> For models that minimize squared error (like linear regression),
+          the R-squared is the square of the correlation between the outcome
+          and the prediction.
+      -> the predictions and the true outcome are correlated
+
+- Correlation and R-squared
+    . True for modelss that minimize squared error:
+        ~ Linear regression
+        ~ GAM regression
+        ~ Tree-based algorithms that minimize squred error
+    . True for training data; NOT true for future application data
+
+**Practices**
+
+Calculate R-Squared
+Now that you've calculated the RMSE of your model's predictions, you will examine how well the model fits the data: that is, how much variance does it explain. You can do this using R2.
+
+Suppose y is the true outcome, p is the prediction from the model, and res=y−p are the residuals of the predictions.
+
+Then the total sum of squares tss ("total variance") of the data is:
+
+tss=∑(y−y¯¯¯)2
+where y¯¯¯ is the mean value of y.
+
+The residual sum of squared errors of the model, rss is:
+rss=∑res2
+R2 (R-Squared), the "variance explained" by the model, is then:
+
+1−rss/tss
+After you calculate R2, you will compare what you computed with the R2 reported by glance(). glance() returns a one-row data frame; for a linear regression model, one of the columns returned is the R2 of the model on the training data.
+
+The data frame unemployment is in your workspace, with the columns predictions and residuals that you calculated in a previous exercise.
+
+The data frame unemployment and the model unemployment_model are in the workspace.
+
+    - Calculate the mean female_unemployment and assign it to the variable fe_mean.
+    - Calculate the total sum of squares and assign it to the variable tss.
+    - Calculate the residual sum of squares and assign it to the variable rss.
+    - Calculate R2. Is it a good fit (R2 near 1)?
+    - Use glance() to get R2 from the model. Is it the same as what you calculated?
+
+----------------------------------------------------------------
+
+> unemployment
+   male_unemployment female_unemployment predictions   residuals
+1                2.9                 4.0    3.448245 -0.55175451
+2                6.7                 7.4    6.087456 -1.31254386
+3                4.9                 5.0    4.837304 -0.16269612
+4                7.9                 7.2    6.920891 -0.27910835
+5                9.8                 7.9    8.240497  0.34049690
+6                6.9                 6.1    6.226362  0.12636236
+7                6.1                 6.0    5.670739 -0.32926122
+8                6.2                 5.8    5.740192 -0.05980856
+9                6.0                 5.2    5.601286  0.40128612
+10               5.1                 4.2    4.976210  0.77620978
+11               4.7                 4.0    4.698398  0.69839784
+12               4.4                 4.4    4.490039  0.09003919
+13               5.8                 5.2    5.462380  0.26238041
+
+> summary(unemployment)
+ male_unemployment female_unemployment  predictions      residuals       
+ Min.   :2.900     Min.   :4.000       Min.   :3.448   Min.   :-1.31254  
+ 1st Qu.:4.900     1st Qu.:4.400       1st Qu.:4.837   1st Qu.:-0.27911  
+ Median :6.000     Median :5.200       Median :5.601   Median : 0.09004  
+ Mean   :5.954     Mean   :5.569       Mean   :5.569   Mean   : 0.00000  
+ 3rd Qu.:6.700     3rd Qu.:6.100       3rd Qu.:6.087   3rd Qu.: 0.34050  
+ Max.   :9.800     Max.   :7.900       Max.   :8.240   Max.   : 0.77621
+
+> unemployment_model
+Call:
+lm(formula = fmla, data = unemployment)
+Coefficients:
+      (Intercept)  male_unemployment  
+           1.4341             0.6945
+
+> summary(unemployment_model)
+Call:
+lm(formula = fmla, data = unemployment)
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.77621 -0.34050 -0.09004  0.27911  1.31254 
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        1.43411    0.60340   2.377   0.0367 *  
+male_unemployment  0.69453    0.09767   7.111 1.97e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Residual standard error: 0.5803 on 11 degrees of freedom
+Multiple R-squared:  0.8213,	Adjusted R-squared:  0.8051 
+F-statistic: 50.56 on 1 and 11 DF,  p-value: 1.966e-05
+
+# Calculate mean female_unemployment: fe_mean. Print it
+> (fe_mean <- mean(unemployment$female_unemployment))
+[1] 5.569231
+
+# Calculate total sum of squares: tss. Print it
+> (tss <- sum((unemployment$female_unemployment - fe_mean)^2))
+[1] 20.72769
+
+# Calculate residual sum of squares: rss. Print it
+> (rss <- sum(unemployment$residuals^2))
+[1] 3.703714
+ 
+# Calculate R-squared: rsq. Print it. Is it a good fit?
+> (rsq <- 1 - (rss/tss))
+[1] 0.8213157
+ 
+# Get R-squared from glance. Print it
+> (rsq_glance <- glance(unemployment_model)$r.squared)
+[1] 0.8213157
+
+-----------------------------------------------------------------
+
+Correlation and R-squared
+The linear correlation of two variables, x and y, measures the strength of the linear relationship between them. When x and y are respectively:
+
+the outcomes of a regression model that minimizes squared-error (like linear regression) and
+the true outcomes of the training data,
+then the square of the correlation is the same as R2. You will verify that in this exercise.
+
+    - Use cor() to get the correlation between the predictions and female unemployment. 
+        Assign it to the variable rho and print it. Make sure you use Pearson correlation 
+        (the default).
+    - Square rho and assign it to rho2. Print it.
+    - Compare rho2 to R2 from the model (using glance()). Is it the same?
+
+---------------------------------------------------------------------
+
+> unemployment
+   male_unemployment female_unemployment predictions   residuals
+1                2.9                 4.0    3.448245 -0.55175451
+2                6.7                 7.4    6.087456 -1.31254386
+3                4.9                 5.0    4.837304 -0.16269612
+4                7.9                 7.2    6.920891 -0.27910835
+5                9.8                 7.9    8.240497  0.34049690
+6                6.9                 6.1    6.226362  0.12636236
+7                6.1                 6.0    5.670739 -0.32926122
+8                6.2                 5.8    5.740192 -0.05980856
+9                6.0                 5.2    5.601286  0.40128612
+10               5.1                 4.2    4.976210  0.77620978
+11               4.7                 4.0    4.698398  0.69839784
+12               4.4                 4.4    4.490039  0.09003919
+13               5.8                 5.2    5.462380  0.26238041
+
+# unemployment is in your workspace
+> summary(unemployment)
+ male_unemployment female_unemployment  predictions      residuals       
+ Min.   :2.900     Min.   :4.000       Min.   :3.448   Min.   :-1.31254  
+ 1st Qu.:4.900     1st Qu.:4.400       1st Qu.:4.837   1st Qu.:-0.27911  
+ Median :6.000     Median :5.200       Median :5.601   Median : 0.09004  
+ Mean   :5.954     Mean   :5.569       Mean   :5.569   Mean   : 0.00000  
+ 3rd Qu.:6.700     3rd Qu.:6.100       3rd Qu.:6.087   3rd Qu.: 0.34050  
+ Max.   :9.800     Max.   :7.900       Max.   :8.240   Max.   : 0.77621
+ 
+# unemployment_model is in the workspace
+> summary(unemployment_model)
+Call:
+lm(formula = fmla, data = unemployment)
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.77621 -0.34050 -0.09004  0.27911  1.31254 
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        1.43411    0.60340   2.377   0.0367 *  
+male_unemployment  0.69453    0.09767   7.111 1.97e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Residual standard error: 0.5803 on 11 degrees of freedom
+Multiple R-squared:  0.8213,	Adjusted R-squared:  0.8051 
+F-statistic: 50.56 on 1 and 11 DF,  p-value: 1.966e-05
+ 
+# Get the correlation between the prediction and true outcome: rho and print it
+> (rho <- cor(unemployment$predictions, unemployment$female_unemployment))
+[1] 0.9062647
+ 
+# Square rho: rho2 and print it
+> (rho2 <- rho^2)
+[1] 0.8213157
+
+# Get R-squared from glance and print it
+> (rsq_glance <- glance(unemployment_model)$r.squared)
+[1] 0.8213157
+ 
+----------------------------------------------------------------------------------
+
+_______________________________
+***Properly Training a Model***
+_______________________________
+
+- In general, a model performs better on its own training data than on data it hasn't yet seen
+        ex: Training R2: 0.9
+            Test R2: 0.15
+            --> Overfit
+- For simple models like linear regression, this upward bias is often not severe; but for 
+  more complex models, or even for a linear model with too many variables, using only the
+  training data to evaluate the model can produce misleading results.
+
+- With a lot of data, it's best to split it in two:
+          . one set to train the model
+          . one set to test the model
+
+- If there is not enough data to split, use cross-validation to estimate a model's out of sample performance.
+    . In n-fold cross-validation, you partition the data into n-subsets.
+           
+        ex: 3-fold cross-validation to partition the data into 3 subsets: A, B & C
+                
+                1. train a model using the data from set A & B, and use that model to make
+                      predictions on C
+                2. train a model on B and C to predict on A
+                3. train a model on A and C to predict on B
+                
+                None of these models has made predictions on its own training data
+                All the predictions are essentially "test set" predictions.
+        -> RMSE and R-squared calculated from these predictions should give an
+            an biased estimate of how a model fit to all the training data will perform
+            on future data.
+                  
+- Create a cross-validation plan
+            
+            library(vtreat)
+            splitPlan <- kWayCrossValidation(nRows, nSplits, NULL, NULL)
+                    . nRows: # of rows in the training data
+                    . nSplits: # folds (partitions) in the cross-validation
+                          ex: nfolds = 3 --> 3 way cross validation
+                    . remaining 2 arguments not needed her.
+                    
+            -> returns the indices for training and testing for each fold.
+                Use the data with the training indices to fit a model and
+                then make prediction on the data with the app, or test, indices.
+                
+              # first fold (A and B to train, C to test)
+              splitPlan[[1]]
+              
+              # train on A & B, test on C
+              split <- splitPlan[[1]]
+              model <- lm(fmla, data = df[split$train, ])
+              df$pred.cv[split$app] <- predict(model, newdata = df[split$app, ])
+              
+- If the estimated model performance looks good enough, then use all the data to fit 
+    a final model
+- You can't evaluate this final model's future performance, because you don't have data 
+    to evaluate it with
+    
+- Cross-validation only tests the modeling process, 
+    while test/train split tests the final model.
+    
+**Practices**
+
+Generating a random test/train split
+For the next several exercises you will use the mpg data from the package ggplot2. The data describes the characteristics of several makes and models of cars from different years. The goal is to predict city fuel efficiency from highway fuel efficiency.
+
+In this exercise, you will split mpg into a training set mpg_train (75% of the data) and a test set mpg_test (25% of the data). One way to do this is to generate a column of uniform random numbers between 0 and 1, using the function runif().
+
+If you have a data set dframe of size N, and you want a random subset of approximately size 100∗X% of N (where X is between 0 and 1), then:
+
+Generate a vector of uniform random numbers: gp = runif(N).
+dframe[gp < X,] will be about the right size.
+dframe[gp >= X,] will be the complement.
+
+The data frame mpg is in the workspace.
+
+    - Use the function nrow to get the number of rows in the data frame mpg. 
+        Assign this count to the variable N and print it.
+    - Calculate about how many rows 75% of N should be. 
+        Assign it to the variable target and print it.
+    - Use runif() to generate a vector of N uniform random numbers, called gp.
+    - Use gp to split mpg into mpg_train and mpg_test (with mpg_train containing 
+        approximately 75% of the data).
+    - Use nrow() to check the size of mpg_train and mpg_test. 
+      Are they about the right size?
+
+------------------------------------------------------------------
+
+# load tidyverse to get the mpg dataset
+# mpg is in the workspace
+
+summary(mpg)
+ manufacturer          model               displ            year     
+ Length:234         Length:234         Min.   :1.600   Min.   :1999  
+ Class :character   Class :character   1st Qu.:2.400   1st Qu.:1999  
+ Mode  :character   Mode  :character   Median :3.300   Median :2004  
+                                       Mean   :3.472   Mean   :2004  
+                                       3rd Qu.:4.600   3rd Qu.:2008  
+                                       Max.   :7.000   Max.   :2008  
+      cyl           trans               drv                 cty       
+ Min.   :4.000   Length:234         Length:234         Min.   : 9.00  
+ 1st Qu.:4.000   Class :character   Class :character   1st Qu.:14.00  
+ Median :6.000   Mode  :character   Mode  :character   Median :17.00  
+ Mean   :5.889                                         Mean   :16.86  
+ 3rd Qu.:8.000                                         3rd Qu.:19.00  
+ Max.   :8.000                                         Max.   :35.00  
+      hwy             fl               class          
+ Min.   :12.00   Length:234         Length:234        
+ 1st Qu.:18.00   Class :character   Class :character  
+ Median :24.00   Mode  :character   Mode  :character  
+ Mean   :23.44                                        
+ 3rd Qu.:27.00                                        
+ Max.   :44.00
+
+dim(mpg)
+[1] 234  11
+
+# Use nrow to get the number of rows in mpg (N) and print it
+(N <- nrow(mpg))
+>[1] 234
+ 
+# Calculate how many rows 75% of N should be and print it
+# Hint: use round() to get an integer
+(target <- round(N * 0.75))
+>[1] 176
+ 
+# Create the vector of N uniform random variables: gp
+gp <- runif(N)
+ 
+# Use gp to create the training set: mpg_train (75% of data) and mpg_test (25% of data)
+> mpg_train <- mpg[gp < 0.75, ]
+> mpg_test <- mpg[gp >= 0.75, ]
+
+# Use nrow() to examine mpg_train and mpg_test
+> nrow(mpg_train)
+[1] 179
+
+> nrow(mpg_test)
+[1] 55
+
+--------------------------------------------------------------------------
+
+Train a model using test/train split
+Now that you have split the mpg dataset into mpg_train and mpg_test, you will use mpg_train to train a model to predict city fuel efficiency (cty) from highway fuel efficiency (hwy).
+
+    - The data frame mpg_train is in the workspace.
+
+    - Create a formula fmla that expresses the relationship cty as a function of hwy.
+        Print it.
+    - Train a model mpg_model on mpg_train to predict cty from hwy using fmla and lm().
+    - Use summary() to examine the model.
+
+-----------------------------------------------------------------------------
+
+ # mpg_train is in the workspace
+> summary(mpg_train)
+ manufacturer          model               displ            year     
+ Length:180         Length:180         Min.   :1.600   Min.   :1999  
+ Class :character   Class :character   1st Qu.:2.500   1st Qu.:1999  
+ Mode  :character   Mode  :character   Median :3.400   Median :2008  
+                                       Mean   :3.558   Mean   :2004  
+                                       3rd Qu.:4.600   3rd Qu.:2008  
+                                       Max.   :7.000   Max.   :2008  
+      cyl           trans               drv                 cty       
+ Min.   :4.000   Length:180         Length:180         Min.   : 9.00  
+ 1st Qu.:4.000   Class :character   Class :character   1st Qu.:14.00  
+ Median :6.000   Mode  :character   Mode  :character   Median :16.00  
+ Mean   :6.022                                         Mean   :16.58  
+ 3rd Qu.:8.000                                         3rd Qu.:19.00  
+ Max.   :8.000                                         Max.   :33.00  
+      hwy             fl               class          
+ Min.   :12.00   Length:180         Length:180        
+ 1st Qu.:18.00   Class :character   Class :character  
+ Median :24.00   Mode  :character   Mode  :character  
+ Mean   :23.11                                        
+ 3rd Qu.:27.00                                        
+ Max.   :44.00
+ 
+# Create a formula to express cty as a function of hwy: fmla and print it.
+> (fmla <- cty ~ hwy)
+cty ~ hwy
+
+# Now use lm() to build a model mpg_model from mpg_train that predicts cty from hwy
+> (mpg_model <- lm(fmla, mpg_train))
+Call:
+lm(formula = fmla, data = mpg_train)
+Coefficients:
+(Intercept)          hwy  
+     1.1337       0.6683
+ 
+# Use summary() to examine the model
+> summary(mpg_model)
+Call:
+lm(formula = fmla, data = mpg_train)
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-2.8400 -0.8305 -0.1551  0.5865  4.8140 
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  1.13375    0.38309   2.959   0.0035 ** 
+hwy          0.66825    0.01608  41.564   <2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Residual standard error: 1.251 on 178 degrees of freedom
+Multiple R-squared:  0.9066,	Adjusted R-squared:  0.9061 
+F-statistic:  1728 on 1 and 178 DF,  p-value: < 2.2e-16
+
+-------------------------------------------------------------------
+
+Evaluate a model using test/train split
+Now you will test the model mpg_model on the test data, mpg_test. Functions rmse() and r_squared() to calculate RMSE and R-squared have been provided for convenience:
+
+rmse(predcol, ycol)
+r_squared(predcol, ycol)
+where:
+
+predcol: The predicted values
+ycol: The actual outcome
+You will also plot the predictions vs. the outcome.
+
+Generally, model performance is better on the training data than the test data (though sometimes the test set "gets lucky"). A slight difference in performance is okay; if the performance on training is significantly better, there is a problem.
+
+The data frames mpg_train and mpg_test, and the model mpg_model are in the workspace, along with the functions rmse() and r_squared().
+
+    - Predict city fuel efficiency from hwy on the mpg_train data. 
+        Assign the predictions to the column pred.
+    - Predict city fuel efficiency from hwy on the mpg_test data. 
+        Assign the predictions to the column pred.
+    - Use rmse() to evaluate rmse for both the test and training sets. Compare. 
+        Are the performances similar?
+    - Do the same with r_squared(). Are the performances similar?
+    - Use ggplot2 to plot the predictions against cty on the test data.
+
+---------------------------------------------------------------------
+
+# Examine the objects in the workspace
+ls.str()
+>mpg_model : List of 12
+ $ coefficients : Named num [1:2] 1.134 0.668
+ $ residuals    : Named num [1:180] -2.513 0.487 -1.85 -2.508 -0.508 ...
+ $ effects      : Named num [1:180] -222.414 -51.994 -1.735 -2.354 -0.354 ...
+ $ rank         : int 2
+ $ fitted.values: Named num [1:180] 20.5 20.5 21.8 18.5 18.5 ...
+ $ assign       : int [1:2] 0 1
+ $ qr           :List of 5
+ $ df.residual  : int 178
+ $ xlevels      : Named list()
+ $ call         : language lm(formula = fmla, data = mpg_train)
+ $ terms        :Classes 'terms', 'formula'  language cty ~ hwy
+ $ model        :'data.frame':	180 obs. of  2 variables:
+mpg_test : Classes 'tbl_df', 'tbl' and 'data.frame':	54 obs. of  11 variables:
+ $ manufacturer: chr  "audi" "audi" "audi" "audi" ...
+ $ model       : chr  "a4" "a4" "a4 quattro" "a4 quattro" ...
+ $ displ       : num  2 3.1 1.8 2 4.2 5.3 6.5 2.4 3.7 5.2 ...
+ $ year        : int  2008 2008 1999 2008 2008 2008 1999 1999 2008 1999 ...
+ $ cyl         : int  4 6 4 4 8 8 8 4 6 8 ...
+ $ trans       : chr  "auto(av)" "auto(av)" "auto(l5)" "auto(s6)" ...
+ $ drv         : chr  "f" "f" "4" "4" ...
+ $ cty         : int  21 18 16 19 16 11 14 19 15 11 ...
+ $ hwy         : int  30 27 25 27 23 14 17 27 19 17 ...
+ $ fl          : chr  "p" "p" "p" "p" ...
+ $ class       : chr  "compact" "compact" "compact" "compact" ...
+mpg_train : Classes 'tbl_df', 'tbl' and 'data.frame':	180 obs. of  11 variables:
+ $ manufacturer: chr  "audi" "audi" "audi" "audi" ...
+ $ model       : chr  "a4" "a4" "a4" "a4" ...
+ $ displ       : num  1.8 1.8 2 2.8 2.8 1.8 2 2.8 2.8 3.1 ...
+ $ year        : int  1999 1999 2008 1999 1999 1999 2008 1999 1999 2008 ...
+ $ cyl         : int  4 4 4 6 6 4 4 6 6 6 ...
+ $ trans       : chr  "auto(l5)" "manual(m5)" "manual(m6)" "auto(l5)" ...
+ $ drv         : chr  "f" "f" "f" "f" ...
+ $ cty         : int  18 21 20 16 18 18 20 15 17 17 ...
+ $ hwy         : int  29 29 31 26 26 26 28 25 25 25 ...
+ $ fl          : chr  "p" "p" "p" "p" ...
+ $ class       : chr  "compact" "compact" "compact" "compact" ...
+r_squared : function (predcol, ycol)  
+rmse : function (predcol, ycol)
+
+# predict cty from hwy for the training set
+mpg_train$pred <- predict(mpg_model)
+
+# predict cty from hwy for the test set
+mpg_test$pred <- predict(mpg_model, newdata = mpg_test)
+
+# Evaluate the rmse on both training and test data and print them
+(rmse_train <- rmse(mpg_train$pred, mpg_train$cty))
+> [1] 1.243958
+
+(rmse_test <- rmse(mpg_test$pred, mpg_test$cty))
+>[1] 1.277228
+ 
+ 
+# Evaluate the r-squared on both training and test data.and print them
+(rsq_train <- r_squared(mpg_train$pred, mpg_train$cty))
+>[1] 0.9065908
+
+(rsq_test <- r_squared(mpg_test$pred, mpg_test$cty))
+>[1] 0.9251412
+ 
+# Plot the predictions (on the x-axis) against the outcome (cty) on the test data
+ggplot(mpg_test, aes(x = pred, y = cty)) + 
+    geom_point() + 
+    geom_abline()
+
+------------------------------------------------------------
+
+Create a cross validation plan
+There are several ways to implement an n-fold cross validation plan. In this exercise you will create such a plan using vtreat::kWayCrossValidation(), and examine it.
+
+kWayCrossValidation() creates a cross validation plan with the following call:
+
+        splitPlan <- kWayCrossValidation(nRows, nSplits, dframe, y)
+        
+where nRows is the number of rows of data to be split, and nSplits is the desired number of cross-validation folds.
+
+Strictly speaking, dframe and y aren't used by kWayCrossValidation; they are there for compatibility with other vtreat data partitioning functions. You can set them both to NULL.
+
+The resulting splitPlan is a list of nSplits elements; each element contains two vectors:
+
+train: the indices of dframe that will form the training set
+app: the indices of dframe that will form the test (or application) set
+In this exercise you will create a 3-fold cross-validation plan for the data set mpg.
+
+    - Load the package vtreat.
+    - Get the number of rows in mpg and assign it to the variable nRows.
+    - Call kWayCrossValidation to create a 3-fold cross validation plan 
+        and assign it to the variable splitPlan.
+    - You can set the last two arguments of the function to NULL.
+    - Call str() to examine the structure of splitPlan.
+    
+--------------------------------------------------------------- 
+
+# Load the package vtreat
+library(vtreat)
+
+# mpg is in the workspace
+summary(mpg)
+>manufacturer          model               displ            year     
+ Length:234         Length:234         Min.   :1.600   Min.   :1999  
+ Class :character   Class :character   1st Qu.:2.400   1st Qu.:1999  
+ Mode  :character   Mode  :character   Median :3.300   Median :2004  
+                                       Mean   :3.472   Mean   :2004  
+                                       3rd Qu.:4.600   3rd Qu.:2008  
+                                       Max.   :7.000   Max.   :2008  
+      cyl           trans               drv                 cty       
+ Min.   :4.000   Length:234         Length:234         Min.   : 9.00  
+ 1st Qu.:4.000   Class :character   Class :character   1st Qu.:14.00  
+ Median :6.000   Mode  :character   Mode  :character   Median :17.00  
+ Mean   :5.889                                         Mean   :16.86  
+ 3rd Qu.:8.000                                         3rd Qu.:19.00  
+ Max.   :8.000                                         Max.   :35.00  
+      hwy             fl               class          
+ Min.   :12.00   Length:234         Length:234        
+ 1st Qu.:18.00   Class :character   Class :character  
+ Median :24.00   Mode  :character   Mode  :character  
+ Mean   :23.44                                        
+ 3rd Qu.:27.00                                        
+ Max.   :44.00
+ 
+# Get the number of rows in mpg
+nRows <- nrow(mpg)
+ 
+# Implement the 3-fold cross-fold plan with vtreat
+splitPlan <- kWayCrossValidation(nRows, 3, NULL, NULL)
+
+# Examine the split plan
+str(splitPlan)
+>List of 3
+ $ :List of 2
+  ..$ train: int [1:156] 1 2 4 5 8 10 12 13 15 16 ...
+  ..$ app  : int [1:78] 220 3 7 213 175 163 176 179 214 228 ...
+ $ :List of 2
+  ..$ train: int [1:156] 2 3 4 5 6 7 9 11 13 14 ...
+  ..$ app  : int [1:78] 19 93 53 144 64 12 57 225 81 166 ...
+ $ :List of 2
+  ..$ train: int [1:156] 1 3 6 7 8 9 10 11 12 14 ...
+  ..$ app  : int [1:78] 150 65 33 230 105 116 5 125 135 172 ...
+ - attr(*, "splitmethod")= chr "kwaycross"
+ 
+-------------------------------------------------------------------
+
+Evaluate a modeling procedure using n-fold cross-validation
+In this exercise you will use splitPlan, the 3-fold cross validation plan from the previous exercise, to make predictions from a model that predicts mpg$cty from mpg$hwy.
+
+If dframe is the training data, then one way to add a column of cross-validation predictions to the frame is as follows:
+
+
+# Initialize a column of the appropriate length
+dframe$pred.cv <- 0 
+
+# k is the number of folds
+# splitPlan is the cross validation plan
+
+for(i in 1:k) {
+  # Get the ith split
+  split <- splitPlan[[i]]
+
+  # Build a model on the training data 
+  # from this split 
+  # (lm, in this case)
+  model <- lm(fmla, data = dframe[split$train,])
+
+  # make predictions on the 
+  # application data from this split
+  dframe$pred.cv[split$app] <- predict(model, newdata = dframe[split$app,])
+          }
+
+
+Cross-validation predicts how well a model built from all the data will perform on new data. As with the test/train split, for a good modeling procedure, cross-validation performance and training performance should be close.
+
+The data frame mpg, the cross validation plan splitPlan, and the function to calculate RMSE (rmse()) from one of the previous exercises is available in your workspace.
+
+    - Run the 3-fold cross validation plan from splitPlan and put the predictions 
+      in the column mpg$pred.cv.
+    - Use lm() and the formula cty ~ hwy.
+    - Create a linear regression model on all the mpg data (formula cty ~ hwy) 
+        and assign the predictions to mpg$pred.
+    - Use rmse() to get the root mean squared error of the predictions 
+        from the full model (mpg$pred). Recall that rmse() takes two arguments, 
+        the predicted values, and the actual outcome.
+    - Get the root mean squared error of the cross-validation predictions. 
+        Are the two values about the same?
+
+---------------------------------------------------------------------------
+
+# mpg is in the workspace
+> summary(mpg)
+ manufacturer          model               displ            year     
+ Length:234         Length:234         Min.   :1.600   Min.   :1999  
+ Class :character   Class :character   1st Qu.:2.400   1st Qu.:1999  
+ Mode  :character   Mode  :character   Median :3.300   Median :2004  
+                                       Mean   :3.472   Mean   :2004  
+                                       3rd Qu.:4.600   3rd Qu.:2008  
+                                       Max.   :7.000   Max.   :2008  
+      cyl           trans               drv                 cty       
+ Min.   :4.000   Length:234         Length:234         Min.   : 9.00  
+ 1st Qu.:4.000   Class :character   Class :character   1st Qu.:14.00  
+ Median :6.000   Mode  :character   Mode  :character   Median :17.00  
+ Mean   :5.889                                         Mean   :16.86  
+ 3rd Qu.:8.000                                         3rd Qu.:19.00  
+ Max.   :8.000                                         Max.   :35.00  
+      hwy             fl               class          
+ Min.   :12.00   Length:234         Length:234        
+ 1st Qu.:18.00   Class :character   Class :character  
+ Median :24.00   Mode  :character   Mode  :character  
+ Mean   :23.44                                        
+ 3rd Qu.:27.00                                        
+ Max.   :44.00
+
+# splitPlan is in the workspace
+str(splitPlan)
+> List of 3
+ $ :List of 2
+  ..$ train: int [1:156] 3 5 8 9 10 11 13 14 17 18 ...
+  ..$ app  : int [1:78] 80 4 216 60 227 166 220 119 73 168 ...
+ $ :List of 2
+  ..$ train: int [1:156] 1 2 3 4 5 6 7 10 11 12 ...
+  ..$ app  : int [1:78] 54 180 174 162 14 79 230 150 151 17 ...
+ $ :List of 2
+  ..$ train: int [1:156] 1 2 4 6 7 8 9 12 14 15 ...
+  ..$ app  : int [1:78] 11 58 142 219 141 13 3 94 128 76 ...
+ - attr(*, "splitmethod")= chr "kwaycross"
+
+# Run the 3-fold cross validation plan from splitPlan
+k <- 3 # Number of folds
+
+mpg$pred.cv <- 0
+
+for(i in 1:k) {
+    split <- splitPlan[[i]]
+    model <- lm(cty ~ hwy, data = mpg[split$train, ])
+    mpg$pred.cv[split$app] <- predict(model, newdata = mpg[split$app, ])
+  }
+
+# Predict from a full model
+mpg$pred <- predict(lm(cty ~ hwy, data = mpg))
+ 
+# Get the rmse of the full model's predictions
+rmse(mpg$pred, mpg$cty)
+> [1] 1.247045
+
+# Get the rmse of the cross-validation predictions
+rmse(mpg$pred.cv, mpg$cty)
+> [1] 1.260323
+
+---------------------------------------------------------------------------------
+
+***
+### PART 3: ISSUES TO CONSIDER ###
+***
+
+
+________________________
+***Categorical Inputs***
+________________________
